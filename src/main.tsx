@@ -1,7 +1,14 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { useClock } from '@/clock/clockStore'
+import { useStore } from '@/store/index'
+import App from './App'
 import './index.css'
-import App from './App.tsx'
+
+// 第一次開站（localStorage 沒有資料）時用當前虛擬時間產生 seed
+if (localStorage.getItem('auction-demo:store') === null) {
+  useStore.getState().reset(useClock.getState().virtualNow())
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

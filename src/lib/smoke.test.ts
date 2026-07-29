@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 
 describe('工具鏈', () => {
   it('cn 會合併並去除衝突的 tailwind class', () => {
