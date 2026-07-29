@@ -45,8 +45,10 @@ describe('AppShell 導覽', () => {
 
   it('頂欄顯示角色徽章與虛擬時間', () => {
     renderApp({ route: '/dealer/auctions', userId: DEALER_A_ID })
-    expect(screen.getByText('二手車商')).toBeInTheDocument()
-    expect(screen.getByText('2026/07/28 12:00')).toBeInTheDocument()
+    // Demo 控制台的精簡橫條也顯示同一個時間，必須限定在頂欄內
+    const header = screen.getByRole('banner')
+    expect(within(header).getByText('二手車商')).toBeInTheDocument()
+    expect(within(header).getByText('2026/07/28 12:00')).toBeInTheDocument()
   })
 
   it('側欄可收合，收合後只剩 icon', async () => {
