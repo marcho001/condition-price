@@ -1,10 +1,10 @@
 import { Star } from 'lucide-react'
 import { useMemo } from 'react'
-import { Link } from 'react-router'
 import { toast } from 'sonner'
 import { AuctionCard } from '@/components/auction/AuctionCard'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ButtonLink } from '@/components/common/ButtonLink'
 import { Button } from '@/components/ui/button'
 import { useStore } from '@/store/index'
 import { useCurrentUser } from '@/store/useCurrentUser'
@@ -29,7 +29,7 @@ export default function Watchlist() {
         <EmptyState
           title="還沒有關注任何拍賣"
           description="在拍賣列表或詳細頁點星號即可加入關注。"
-          action={<Button render={<Link to="/dealer/auctions" />}>前往拍賣列表</Button>}
+          action={<ButtonLink to="/dealer/auctions">前往拍賣列表</ButtonLink>}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

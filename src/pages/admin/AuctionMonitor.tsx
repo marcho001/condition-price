@@ -9,6 +9,7 @@ import { StatRow } from '@/components/auction/StatRow'
 import { StatusBadge } from '@/components/auction/StatusBadge'
 import { TypeBadge } from '@/components/auction/TypeBadge'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ButtonLink } from '@/components/common/ButtonLink'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import {
@@ -69,9 +70,9 @@ export default function AuctionMonitor() {
         actions={
           <>
             {auction.status === '未開始' && (
-              <Button variant="outline" render={<Link to={`/admin/auctions/${auction.id}/edit`} />}>
+              <ButtonLink variant="outline" to={`/admin/auctions/${auction.id}/edit`}>
                 編輯設定
-              </Button>
+              </ButtonLink>
             )}
             {canWithdraw && (
               <Button variant="outline" onClick={() => setWithdrawOpen(true)}>

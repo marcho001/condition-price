@@ -3,9 +3,9 @@ import { toast } from 'sonner'
 import { SPEEDS, useClock } from '@/clock/clockStore'
 import { useVirtualNow } from '@/clock/useVirtualNow'
 import { Button } from '@/components/ui/button'
+import { skipAndAdvance } from '@/components/demo/skipAndAdvance'
 import { formatDateTime } from '@/lib/time'
 import { cn } from '@/lib/utils'
-import { useStore } from '@/store/index'
 
 const MIN = 60_000
 const SKIPS: Array<[string, number]> = [
@@ -16,14 +16,6 @@ const SKIPS: Array<[string, number]> = [
 ]
 
 const SPEED_LABEL: Record<number, string> = { 0: '暫停', 1: '1x', 10: '10x', 60: '60x' }
-
-/** 快轉後立刻推進引擎，讓使用者馬上看到結果而不必等下一個 tick */
-export function skipAndAdvance(ms: number): number {
-  const before = useStore.getState().notifications.length
-  useClock.getState().skip(ms)
-  useStore.getState().advance(useClock.getState().virtualNow())
-  return useStore.getState().notifications.length - before
-}
 
 export function TimeControls() {
   const clock = useClock()

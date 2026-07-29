@@ -1,10 +1,11 @@
 import { Plus } from 'lucide-react'
 import { useMemo } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { useNavigate } from 'react-router'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { FilterBar, type FilterField } from '@/components/filters/FilterBar'
 import { useFilterParams } from '@/components/filters/useFilterParams'
+import { ButtonLink } from '@/components/common/ButtonLink'
 import { Button } from '@/components/ui/button'
 import { VehicleCard } from '@/components/vehicle/VehicleCard'
 import { ALL_BRANDS } from '@/data/vehicleCatalog'
@@ -92,9 +93,9 @@ export default function GarageList() {
               <option value="year">年份由新到舊</option>
               <option value="mileage">里程由低到高</option>
             </select>
-            <Button render={<Link to="/admin/garage/new" />}>
+            <ButtonLink to="/admin/garage/new">
               <Plus className="mr-1 size-4" /> 新增車輛
-            </Button>
+            </ButtonLink>
           </>
         }
       />
@@ -125,14 +126,14 @@ export default function GarageList() {
               vehicle={v}
               actions={
                 <>
-                  <Button
+                  <ButtonLink
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    render={<Link to={`/admin/garage/${v.id}/edit`} />}
+                    to={`/admin/garage/${v.id}/edit`}
                   >
                     編輯
-                  </Button>
+                  </ButtonLink>
                   <Button
                     size="sm"
                     className="flex-1"

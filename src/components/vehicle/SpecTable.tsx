@@ -11,7 +11,8 @@ export function SpecTable({
   vehicle: Vehicle
   showInternal: boolean
 }) {
-  const rows: Array<[string, ReactNode]> = [
+  // value 用函式而非直接放 JSX：JSX 出現在陣列字面值裡會被 linter 誤判為缺少 key
+  const rows: Array<[string, ReactNode | (() => ReactNode)]> = [
     ['訂單號', vehicle.orderNo],
     ['廠牌 / 車型', `${vehicle.brand} ${vehicle.model}`],
     ['年份', vehicle.year],
@@ -25,7 +26,7 @@ export function SpecTable({
     ['車型分類', vehicle.bodyType],
     ['顏色', vehicle.color],
     ['座位數', `${vehicle.seats} 人`],
-    ['車況評級', <GradeBadge grade={vehicle.grade} interiorGrade={vehicle.interiorGrade} />],
+    ['車況評級', () => <GradeBadge grade={vehicle.grade} interiorGrade={vehicle.interiorGrade} />],
   ]
 
   return (
@@ -34,7 +35,7 @@ export function SpecTable({
         {rows.map(([label, value]) => (
           <div key={label} className="grid grid-cols-[8rem_1fr] gap-4 px-4 py-2">
             <dt className="text-slate-500">{label}</dt>
-            <dd className="tabular-nums">{value}</dd>
+            <dd className="tabular-nums">{typeof value === 'function' ? value() : value}</dd>
           </div>
         ))}
         {showInternal && (
