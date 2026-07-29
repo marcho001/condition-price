@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useClock } from '@/clock/clockStore'
-import { TYPE_HINT } from '@/components/auction/TypeBadge'
+import { TYPE_HINT } from '@/lib/auctionMeta'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {

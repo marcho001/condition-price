@@ -7,7 +7,8 @@ import { BidSimulator } from '@/components/demo/BidSimulator'
 import { ForceStateControls } from '@/components/demo/ForceStateControls'
 import { NotificationPusher } from '@/components/demo/NotificationPusher'
 import { ScenarioPicker } from '@/components/demo/ScenarioPicker'
-import { TimeControls, skipAndAdvance } from '@/components/demo/TimeControls'
+import { skipAndAdvance } from '@/components/demo/skipAndAdvance'
+import { TimeControls } from '@/components/demo/TimeControls'
 import {
   CORNER_CLASS,
   CORNER_LABEL,

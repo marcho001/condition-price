@@ -2,7 +2,7 @@ import { Star } from 'lucide-react'
 import { useMemo } from 'react'
 import { toast } from 'sonner'
 import { AuctionCard } from '@/components/auction/AuctionCard'
-import { TYPE_LABEL } from '@/components/auction/TypeBadge'
+import { STATUS_ORDER, TYPE_LABEL } from '@/lib/auctionMeta'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { FilterBar, type FilterField } from '@/components/filters/FilterBar'
@@ -66,15 +66,6 @@ const FIELDS: FilterField[] = [
   { kind: 'toggle', key: 'watched', label: '只看關注' },
   { kind: 'toggle', key: 'mine', label: '只看我出價過的' },
 ]
-
-const STATUS_ORDER: Record<AuctionStatus, number> = {
-  進行中: 0,
-  議價中: 1,
-  未開始: 2,
-  已成交: 3,
-  已流標: 4,
-  已撤標: 5,
-}
 
 export default function DealerAuctionList() {
   const user = useCurrentUser()!

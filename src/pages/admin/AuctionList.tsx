@@ -1,12 +1,12 @@
 import { Plus } from 'lucide-react'
 import { useMemo } from 'react'
-import { Link } from 'react-router'
 import { AuctionCard } from '@/components/auction/AuctionCard'
-import { TYPE_LABEL } from '@/components/auction/TypeBadge'
+import { STATUS_ORDER, TYPE_LABEL } from '@/lib/auctionMeta'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { FilterBar, type FilterField } from '@/components/filters/FilterBar'
 import { useFilterParams } from '@/components/filters/useFilterParams'
+import { ButtonLink } from '@/components/common/ButtonLink'
 import { Button } from '@/components/ui/button'
 import { useStore } from '@/store/index'
 import { filterAuctions } from '@/store/selectors'
@@ -34,16 +34,6 @@ const FIELDS: FilterField[] = [
   },
 ]
 
-/** 需要留意的排在最前面 */
-export const STATUS_ORDER: Record<AuctionStatus, number> = {
-  進行中: 0,
-  議價中: 1,
-  未開始: 2,
-  已成交: 3,
-  已流標: 4,
-  已撤標: 5,
-}
-
 export default function AdminAuctionList() {
   const auctions = useStore((s) => s.auctions)
   const vehicles = useStore((s) => s.vehicles)
@@ -65,9 +55,9 @@ export default function AdminAuctionList() {
         title="拍賣管理"
         description="進行中與議價中的拍賣排在最前面。點卡片進入監控頁。"
         actions={
-          <Button render={<Link to="/admin/auctions/new" />}>
+          <ButtonLink to="/admin/auctions/new">
             <Plus className="mr-1 size-4" /> 新增拍賣
-          </Button>
+          </ButtonLink>
         }
       />
 
@@ -102,23 +92,23 @@ export default function AdminAuctionList() {
                 to={`/admin/auctions/${a.id}`}
                 footer={
                   <>
-                    <Button
+                    <ButtonLink
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      render={<Link to={`/admin/auctions/${a.id}`} />}
+                      to={`/admin/auctions/${a.id}`}
                     >
                       監控
-                    </Button>
+                    </ButtonLink>
                     {a.status === '未開始' ? (
-                      <Button
+                      <ButtonLink
                         variant="outline"
                         size="sm"
                         className="flex-1"
-                        render={<Link to={`/admin/auctions/${a.id}/edit`} />}
+                        to={`/admin/auctions/${a.id}/edit`}
                       >
                         編輯
-                      </Button>
+                      </ButtonLink>
                     ) : (
                       <Button variant="outline" size="sm" className="flex-1" disabled>
                         編輯

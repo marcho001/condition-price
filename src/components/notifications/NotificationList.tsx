@@ -15,7 +15,7 @@ import { formatDateTime } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import type { AppNotification, NotificationType } from '@/types'
 
-export const NOTIFICATION_ICON: Record<NotificationType, typeof Bell> = {
+const NOTIFICATION_ICON: Record<NotificationType, typeof Bell> = {
   OUTBID: TrendingDown,
   ENDING_SOON: Timer,
   EXTENDED: Clock,
