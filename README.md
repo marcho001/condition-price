@@ -115,7 +115,7 @@ npm run build      # 建置
 
 ## 測試
 
-457 個測試，分三層：
+461 個測試，分三層：
 
 - **引擎**（TDD）：級距邊界、軟結標、代理互頂、結標三分支、議價輪替、冪等性
 - **頁面**：以 Testing Library 掛起整個路由樹，驗證每個畫面的行為與底價隔離
@@ -124,8 +124,19 @@ npm run build      # 建置
 
 ## 已知限制
 
-- shadcn 目前的預設 style（base-nova）底層是 **Base UI 而非 Radix**，所有 Trigger 用 `render={<Button/>}` 而不是 `asChild`。維護時要注意這與多數網路範例寫法不同。
-- **按鈕外觀的連結請用 `<ButtonLink>`**，不要寫 `<Button render={<Link/>}>`。後者會讓 Base UI 警告 button 語意被破壞；而 `nativeButton={false}` 雖然消掉警告，卻把 `<a>` 的 role 蓋成 `"button"`，對導覽元素語意更糟。`ButtonLink` 只借用 `buttonVariants` 的樣式，保留原生 `<a role="link">`。
+### Base UI 與 Radix 的差異（重要）
+
+shadcn 目前的預設 style（base-nova）底層是 **Base UI 而不是 Radix**。網路上多數 shadcn 範例是 Radix 寫法，照抄會出問題。目前踩到三個：
+
+| 情況 | Radix 寫法 | 這裡要怎麼寫 |
+|---|---|---|
+| Trigger 換成別的元件 | `asChild` | `render={<Button/>}` |
+| 按鈕外觀的連結 | `<Button asChild><Link/></Button>` | 用 `<ButtonLink>`（見下） |
+| 下拉選單的標題 | `<DropdownMenuLabel>` 可獨立使用 | 必須包在 `<DropdownMenuGroup>` 裡，否則**執行時拋錯** |
+
+**按鈕外觀的連結一律用 `<ButtonLink>`**，不要寫 `<Button render={<Link/>}>`。後者會讓 Base UI 警告 button 語意被破壞；而它建議的 `nativeButton={false}` 雖然消掉警告，卻把 `<a>` 的 role 蓋成 `"button"`，對導覽元素語意更糟（螢幕閱讀器會唸成按鈕，也失去連結的操作提示）。`ButtonLink` 只借用 `buttonVariants` 的樣式，保留原生 `<a role="link">`。
+
+**教訓**：這類錯誤只在「元件被打開」時才出現。DropdownMenu 的 bug 之所以漏掉，就是因為當時沒有任何測試點開過它——其他 Dialog / Popover / Checkbox 都有測試點開，所以都沒壞。**新增任何 Base UI 複合元件時，測試一定要點開它。**
 - 視覺只做到規格定的色票與密度規範，沒有再跑一輪專門的視覺打磨。
 
 ## 未納入 Demo 的範圍
