@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -73,19 +74,26 @@ export function TopBar() {
             </span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>切換角色</DropdownMenuLabel>
-            {LOGINABLE_USERS.map((u) => (
-              <DropdownMenuItem
-                key={u.id}
-                onClick={() => switchTo(u.id)}
-                disabled={u.id === user.id}
-              >
-                {u.company ?? u.name}
-                <span className="ml-2 text-xs text-slate-500">
-                  {u.role === 'staff' ? '公司人員' : '二手車商'}
-                </span>
-              </DropdownMenuItem>
-            ))}
+            {/*
+              Base UI 的 DropdownMenuLabel 是 Menu.GroupLabel，必須包在
+              Menu.Group 裡，否則會拋 MenuGroupContext is missing。
+              （Radix 允許 label 獨立使用，這是兩者的差異）
+            */}
+            <DropdownMenuGroup>
+              <DropdownMenuLabel>切換角色</DropdownMenuLabel>
+              {LOGINABLE_USERS.map((u) => (
+                <DropdownMenuItem
+                  key={u.id}
+                  onClick={() => switchTo(u.id)}
+                  disabled={u.id === user.id}
+                >
+                  {u.company ?? u.name}
+                  <span className="ml-2 text-xs text-slate-500">
+                    {u.role === 'staff' ? '公司人員' : '二手車商'}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
