@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { eventsToNotifications } from '@/engine/notify'
 import type { EngineEvent } from '@/engine/events'
-import { T0, makeAuction, makeBid, makeData, makeIdGen } from '@/engine/testFixtures'
+import { T0, makeBid, makeData, makeIdGen } from '@/engine/testFixtures'
 import type { EngineData, User } from '@/types'
 
 const users: User[] = [
@@ -38,7 +38,7 @@ function run(events: EngineEvent[], data: EngineData = makeData()) {
 
 describe('OUTBID', () => {
   it('只寄給被超越的車商', () => {
-    const n = run([{ type: 'OUTBID', auctionId: 'a1', dealerId: 'd1', reason: 'outbid' }])
+    const n = run([{ type: 'OUTBID', auctionId: 'a1', dealerId: 'd1' }])
     expect(n).toHaveLength(1)
     expect(n[0]).toMatchObject({
       userId: 'd1',
@@ -50,13 +50,8 @@ describe('OUTBID', () => {
     expect(n[0].title).toBe('您的出價已被超越')
   })
 
-  it('代理上限用盡時內文不同', () => {
-    const n = run([{ type: 'OUTBID', auctionId: 'a1', dealerId: 'd1', reason: 'proxy_exhausted' }])
-    expect(n[0].body).toContain('已達您設定的代理出價上限')
-  })
-
   it('通知內文含車輛資訊', () => {
-    const n = run([{ type: 'OUTBID', auctionId: 'a1', dealerId: 'd1', reason: 'outbid' }])
+    const n = run([{ type: 'OUTBID', auctionId: 'a1', dealerId: 'd1' }])
     expect(n[0].body).toContain('Alphard')
   })
 })
@@ -134,7 +129,7 @@ describe('結標通知', () => {
   })
 })
 
-describe('議價與撤標', () => {
+describe('議價', () => {
   it('NEGOTIATION_INVITE 只寄給被邀請者，內文含金額', () => {
     const n = run([
       { type: 'NEGOTIATION_INVITE', auctionId: 'a1', dealerId: 'd1', amount: 2_000_000 },
@@ -144,17 +139,6 @@ describe('議價與撤標', () => {
     expect(n[0].body).toContain('¥2,000,000')
   })
 
-  it('WITHDRAWN 寄給出價者與關注者，且內文不含撤標理由', () => {
-    const d = makeData({
-      auctions: [makeAuction({ status: '已撤標', withdrawReason: '借款人已清償欠款' })],
-      bids: [makeBid({ dealerId: 'd1', amount: 600_000 })],
-      watches: [{ auctionId: 'a1', dealerId: 'd2' }],
-    })
-    const n = run([{ type: 'WITHDRAWN', auctionId: 'a1' }], d)
-    expect(n.map((x) => x.userId).sort()).toEqual(['d1', 'd2'])
-    expect(n.every((x) => !x.body.includes('清償'))).toBe(true)
-    expect(n[0].body).toContain('已下架')
-  })
 })
 
 describe('內部通知', () => {

@@ -16,7 +16,6 @@ const PRESETS: Array<{ value: NotificationType; label: string; title: string; bo
   { value: 'NEGOTIATION_INVITE', label: '議價邀請', title: '議價邀請', body: '您的出價未達底價，加價後即可成交，請於 24 小時內決定。' },
   { value: 'WATCHED_NEW_BID', label: '關注的有新出價', title: '關注的拍賣有新出價', body: '您關注的拍賣出現新出價。' },
   { value: 'WATCHED_STARTED', label: '關注的已開標', title: '關注的拍賣已開標', body: '您關注的拍賣已開始競價。' },
-  { value: 'WITHDRAWN', label: '拍賣已下架', title: '拍賣已下架', body: '這筆拍賣已下架，本次競價中止。' },
   { value: 'NO_BID_ALERT', label: '無人出價（內部）', title: '上架 2 天無人出價', body: '此拍賣已上架 2 天仍無人出價。' },
   { value: 'ENDING_BELOW_RESERVE', label: '未達底價（內部）', title: '即將結標未達底價', body: '此拍賣即將結標，目前最高價仍未達底價。' },
   { value: 'AUCTION_CLOSED', label: '拍賣已結束（內部）', title: '拍賣已結束', body: '此拍賣已結標。' },

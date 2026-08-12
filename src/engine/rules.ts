@@ -6,7 +6,6 @@ export const SOFT_CLOSE: Record<
   { windowMs: number; extendMs: number; capMs: number } | null
 > = {
   SCHEDULED: { windowMs: 180_000, extendMs: 180_000, capMs: 3_600_000 },
-  LIVE: { windowMs: 15_000, extendMs: 15_000, capMs: Number.POSITIVE_INFINITY },
   SEALED: null,
 }
 

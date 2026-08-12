@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  Ban,
   Bell,
   Clock,
   Gavel,
@@ -24,13 +23,12 @@ const NOTIFICATION_ICON: Record<NotificationType, typeof Bell> = {
   NEGOTIATION_INVITE: Handshake,
   WATCHED_NEW_BID: Star,
   WATCHED_STARTED: Star,
-  WITHDRAWN: Ban,
   NO_BID_ALERT: AlertTriangle,
   ENDING_BELOW_RESERVE: AlertTriangle,
   AUCTION_CLOSED: Gavel,
 }
 
-/** 需要立即反應的通知用強調色（提案 9.1：出價被超越是影響成交價最直接的一則） */
+/** 需要立即反應的通知用強調色（Phase 1 §4.5：出價被超越是影響成交價最直接的一則） */
 const URGENT: Set<NotificationType> = new Set([
   'OUTBID',
   'NEGOTIATION_INVITE',

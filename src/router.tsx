@@ -30,6 +30,10 @@ export function Router() {
           <Route path="/admin/garage" element={<AdminGarageList />} />
           <Route path="/admin/garage/new" element={<AdminGarageEdit />} />
           <Route path="/admin/garage/:id/edit" element={<AdminGarageEdit />} />
+        </Route>
+
+        {/* 拍賣設定只有拍賣營運能碰（Phase 1 §1.1） */}
+        <Route element={<RequireRole role="staff" staffRoles={['operator']} />}>
           <Route path="/admin/auctions" element={<AdminAuctionList />} />
           <Route path="/admin/auctions/new" element={<AdminAuctionEdit />} />
           <Route path="/admin/auctions/:id" element={<AdminAuctionMonitor />} />

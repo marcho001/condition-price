@@ -14,10 +14,10 @@ function resultCount() {
 }
 
 describe('車庫列表', () => {
-  it('以 gallery 呈現全部 26 台車', () => {
+  it('以 gallery 呈現全部 27 台車', () => {
     renderApp({ route: '/admin/garage', userId: STAFF_ID })
-    expect(cards()).toHaveLength(26)
-    expect(resultCount()).toBe('26 筆')
+    expect(cards()).toHaveLength(27)
+    expect(resultCount()).toBe('27 筆')
   })
 
   it('依廠牌篩選', async () => {
@@ -63,7 +63,7 @@ describe('車庫列表', () => {
 
     expect(screen.getByText('沒有符合條件的車輛')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '清除篩選條件' }))
-    expect(cards()).toHaveLength(26)
+    expect(cards()).toHaveLength(27)
   })
 
   it('篩選條件寫進 URL query，可分享連結', () => {

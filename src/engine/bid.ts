@@ -1,6 +1,5 @@
 import { validateBidAmount } from '@/lib/money'
 import type { EngineEvent } from '@/engine/events'
-import { resolveProxyBids } from '@/engine/proxy'
 import { highestBid, softCloseExtension } from '@/engine/rules'
 import type { Auction, Bid, EngineData } from '@/types'
 
@@ -44,16 +43,15 @@ export function placeBid(
   const events: EngineEvent[] = []
   const previousLeader = isSealed ? null : (highestBid(existing)?.dealerId ?? null)
 
-  const placed: Bid = { id: nextId(), auctionId, dealerId, amount, at: now, kind: 'manual' }
+  const placed: Bid = { id: nextId(), auctionId, dealerId, amount, at: now }
 
-  let bids = [...data.bids, placed]
+  const bids = [...data.bids, placed]
   let nextAuction: Auction = { ...auction }
-  let proxies = data.proxies
   let vehicles = data.vehicles
 
   events.push({ type: 'NEW_BID', auctionId, dealerId, amount })
   if (previousLeader && previousLeader !== dealerId) {
-    events.push({ type: 'OUTBID', auctionId, dealerId: previousLeader, reason: 'outbid' })
+    events.push({ type: 'OUTBID', auctionId, dealerId: previousLeader })
   }
 
   // 立即成交價：僅密封投標可設
@@ -68,33 +66,8 @@ export function placeBid(
     )
     events.push({ type: 'CLOSED_DEAL', auctionId, dealerId, amount })
     return {
-      data: { ...data, vehicles, auctions: replace(data.auctions, nextAuction), bids, proxies },
+      data: { ...data, vehicles, auctions: replace(data.auctions, nextAuction), bids },
       events,
-    }
-  }
-
-  if (!isSealed) {
-    const proxyResult = resolveProxyBids({
-      auction: nextAuction,
-      bids: bidsOf({ bids }, auctionId),
-      proxies,
-      now,
-      nextId,
-    })
-
-    bids = [...bids, ...proxyResult.newBids]
-
-    for (const b of proxyResult.newBids) {
-      events.push({ type: 'NEW_BID', auctionId, dealerId: b.dealerId, amount: b.amount })
-    }
-    for (const id of proxyResult.outbidDealerIds) {
-      events.push({ type: 'OUTBID', auctionId, dealerId: id, reason: 'outbid' })
-    }
-    for (const id of proxyResult.exhaustedDealerIds) {
-      events.push({ type: 'OUTBID', auctionId, dealerId: id, reason: 'proxy_exhausted' })
-      proxies = proxies.map((p) =>
-        p.auctionId === auctionId && p.dealerId === id ? { ...p, active: false } : p,
-      )
     }
   }
 
@@ -110,7 +83,7 @@ export function placeBid(
   }
 
   return {
-    data: { ...data, vehicles, auctions: replace(data.auctions, nextAuction), bids, proxies },
+    data: { ...data, vehicles, auctions: replace(data.auctions, nextAuction), bids },
     events,
   }
 }

@@ -10,10 +10,11 @@ import { ButtonLink } from '@/components/common/ButtonLink'
 import { Button } from '@/components/ui/button'
 import { useStore } from '@/store/index'
 import { filterAuctions } from '@/store/selectors'
+import { useCurrentUser } from '@/store/useCurrentUser'
 import type { AuctionStatus, AuctionType } from '@/types'
 
-const STATUSES: AuctionStatus[] = ['未開始', '進行中', '議價中', '已流標', '已成交', '已撤標']
-const TYPES: AuctionType[] = ['SCHEDULED', 'LIVE', 'SEALED']
+const STATUSES: AuctionStatus[] = ['未開始', '進行中', '議價中', '已流標', '已成交']
+const TYPES: AuctionType[] = ['SCHEDULED', 'SEALED']
 
 type Query = { types: string[]; statuses: string[] }
 
@@ -35,6 +36,7 @@ const FIELDS: FilterField[] = [
 ]
 
 export default function AdminAuctionList() {
+  const user = useCurrentUser()
   const auctions = useStore((s) => s.auctions)
   const vehicles = useStore((s) => s.vehicles)
   const [query, patch, clear] = useFilterParams<Query>(SPEC)
@@ -88,7 +90,7 @@ export default function AdminAuctionList() {
                 key={a.id}
                 auction={a}
                 vehicle={vehicle}
-                viewer={{ kind: 'staff' }}
+                viewer={{ kind: 'staff', canSeeReserve: user?.canSeeReserve ?? false }}
                 to={`/admin/auctions/${a.id}`}
                 footer={
                   <>

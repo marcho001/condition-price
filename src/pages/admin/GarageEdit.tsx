@@ -17,9 +17,11 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { PhotoGrid } from '@/components/vehicle/PhotoGrid'
 import { SpecTable } from '@/components/vehicle/SpecTable'
+import { Checkbox } from '@/components/ui/checkbox'
 import { CATALOG, COLORS } from '@/data/vehicleCatalog'
 import { newId } from '@/lib/id'
 import { useStore } from '@/store/index'
+import { MIN_PHOTOS } from '@/store/selectors'
 import type {
   BodyType,
   Drive,
@@ -38,7 +40,7 @@ const DRIVES: Drive[] = ['FF', 'FR', '4WD']
 const BODY_TYPES: BodyType[] = ['房車', 'SUV', '七人車', '輕自動車', '商用車']
 
 function randomSeeds() {
-  return Array.from({ length: 6 }, () => Math.floor(Math.random() * 99_999) + 1)
+  return Array.from({ length: MIN_PHOTOS }, () => Math.floor(Math.random() * 99_999) + 1)
 }
 
 function blank(): Vehicle {
@@ -65,6 +67,8 @@ function blank(): Vehicle {
     remarks: '',
     loanBalance: 1_000_000,
     status: '在庫',
+    documentsReady: false,
+    relistCount: 0,
     createdAt: Date.now(),
   }
 }
@@ -259,9 +263,30 @@ export default function GarageEdit() {
         </Section>
 
         <Card className="p-4">
-          <h2 className="mb-3 text-sm font-semibold">照片</h2>
+          <h2 className="mb-1 text-sm font-semibold">照片</h2>
+          <p className="mb-3 text-xs text-slate-500">
+            上架前檢核要求至少 {MIN_PHOTOS} 張（外觀四角、正背面、左右側、引擎室、行李廂、
+            儀表板含里程、前後座、四條輪胎、鑰匙、傷痕特寫）。目前 {form.photoSeeds.length} 張。
+          </p>
           <PhotoGrid seeds={form.photoSeeds} onChange={(next) => set('photoSeeds', next)} />
           {errors.photoSeeds && <p className="mt-2 text-xs text-rose-600">{errors.photoSeeds}</p>}
+        </Card>
+
+        <Card className="p-4">
+          <h2 className="mb-3 text-sm font-semibold">文件</h2>
+          <div className="flex items-center gap-2.5">
+            <Checkbox
+              id="documentsReady"
+              checked={form.documentsReady}
+              onCheckedChange={(v) => set('documentsReady', v === true)}
+            />
+            <Label htmlFor="documentsReady" className="text-sm font-medium">
+              文件已到齊
+            </Label>
+          </div>
+          <p className="mt-1.5 text-xs text-slate-500">
+            行照、保養紀錄、驗車紀錄、事故紀錄、未繳罰單。未到齊無法上架。
+          </p>
         </Card>
 
         <Card className="border-dashed bg-slate-50 p-4">

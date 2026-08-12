@@ -1,11 +1,12 @@
-import { AlertTriangle, Lock } from 'lucide-react'
+import { AlertTriangle, Check, Lock, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
-import { TYPE_HINT, TYPE_LABEL } from '@/lib/auctionMeta'
+import { TYPE_HINT, TYPE_LABEL, TYPE_WHEN } from '@/lib/auctionMeta'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { VehiclePhoto } from '@/components/vehicle/VehiclePhoto'
@@ -15,12 +16,12 @@ import { bidStepFor, formatJPY } from '@/lib/money'
 import { fromDateTimeLocal, toDateTimeLocal } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useStore } from '@/store/index'
+import { checklistPassed, listingChecklist } from '@/store/selectors'
 import type { Auction, AuctionType, StepMode } from '@/types'
 
-const TYPES: AuctionType[] = ['SCHEDULED', 'LIVE', 'SEALED']
+const TYPES: AuctionType[] = ['SCHEDULED', 'SEALED']
 const HOUR = 3_600_000
 const DAY = 86_400_000
-const LIVE_WINDOW_MS = 90_000
 
 const STEP_TABLE = [
   ['未滿 ¥500,000', '¥5,000'],
@@ -39,23 +40,36 @@ export default function AuctionEdit() {
   const existing = id ? auctions.find((a) => a.id === id) : undefined
   const readOnly = existing !== undefined && existing.status !== '未開始'
 
+  /** 由流標的拍賣重掛過來時，帶著原本的設定當起點 */
+  const relistFrom = search.get('relistFrom')
+  const source = relistFrom ? auctions.find((a) => a.id === relistFrom) : undefined
+
   const [form, setForm] = useState<Auction>(() => {
     if (existing) return existing
     const now = useClock.getState().virtualNow()
     const startAt = now + HOUR
-    const endAt = startAt + 4 * DAY
+    const type: AuctionType =
+      search.get('type') === 'SEALED'
+        ? 'SEALED'
+        : search.get('type') === 'SCHEDULED'
+          ? 'SCHEDULED'
+          : (source?.type ?? 'SCHEDULED')
+    const endAt = startAt + (type === 'SEALED' ? 3 : 4) * DAY
     return {
       id: newId('a'),
-      vehicleId: search.get('vehicleId') ?? '',
-      type: 'SCHEDULED',
+      vehicleId: search.get('vehicleId') ?? source?.vehicleId ?? '',
+      type,
       status: '未開始',
       startAt,
       endAt,
       originalEndAt: endAt,
-      startPrice: 500_000,
-      reservePrice: 900_000,
-      stepMode: 'auto',
+      startPrice: source?.startPrice ?? 500_000,
+      reservePrice: source?.reservePrice ?? 900_000,
+      reserveApproved: false,
+      stepMode: source?.stepMode ?? 'auto',
+      fixedStep: source?.fixedStep,
       extendedMs: 0,
+      relistedFromId: source?.id,
       emittedKeys: [],
       createdAt: now,
     }
@@ -68,13 +82,16 @@ export default function AuctionEdit() {
     [vehicles, form.vehicleId],
   )
   const selected = vehicles.find((v) => v.id === form.vehicleId)
+  const checklist = selected ? listingChecklist(selected, form) : []
+  const canList = checklist.length > 0 && checklistPassed(checklist)
 
   const set = <K extends keyof Auction>(key: K, value: Auction[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
 
   function changeType(type: AuctionType) {
     setForm((f) => {
-      const endAt = type === 'LIVE' ? f.startAt + LIVE_WINDOW_MS : f.startAt + 4 * DAY
+      // 定時開標掛 3–7 天、密封投標 2–3 天（Phase 1 §5.1）
+      const endAt = f.startAt + (type === 'SEALED' ? 3 : 4) * DAY
       return {
         ...f,
         type,
@@ -100,6 +117,11 @@ export default function AuctionEdit() {
     }
     setErrors(next)
     if (Object.keys(next).length > 0) return
+
+    if (!canList) {
+      toast.error('上架前檢核尚未通過')
+      return
+    }
 
     const result = saveAuction({ ...form, originalEndAt: form.endAt })
     if (!result.ok) {
@@ -179,7 +201,7 @@ export default function AuctionEdit() {
 
         <Card className="p-4">
           <h2 className="mb-3 text-sm font-semibold">拍賣方式</h2>
-          <div className="grid gap-2 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-2">
             {TYPES.map((t) => (
               <button
                 key={t}
@@ -197,9 +219,19 @@ export default function AuctionEdit() {
                 <span className="mt-1 block text-xs leading-relaxed text-slate-500">
                   {TYPE_HINT[t]}
                 </span>
+                <span className="mt-1.5 block text-xs leading-relaxed text-slate-400">
+                  適合：{TYPE_WHEN[t]}
+                </span>
               </button>
             ))}
           </div>
+          {source && (
+            <p className="mt-3 rounded bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              這是「{TYPE_LABEL[source.type]}」流標後的重掛
+              {source.type !== form.type && '，已換成另一種方式'}。
+              優先換方式而不是降價，避免車商養成等下一輪的習慣。
+            </p>
+          )}
         </Card>
 
         <Card className="p-4">
@@ -236,12 +268,10 @@ export default function AuctionEdit() {
                 onChange={(e) => set('endAt', fromDateTimeLocal(e.target.value))}
               />
               {errors.endAt && <p className="mt-1 text-xs text-rose-600">{errors.endAt}</p>}
-              {form.type === 'LIVE' && (
-                <p className="mt-1 text-xs text-slate-500">
-                  即時同步拍建議 60–120 秒。目前設定為{' '}
-                  {Math.round((form.endAt - form.startAt) / 1000)} 秒。
-                </p>
-              )}
+              <p className="mt-1 text-xs text-slate-500">
+                建議長度：定時開標 3–7 天、密封投標 2–3 天。目前設定為{' '}
+                {Math.round((form.endAt - form.startAt) / DAY)} 天。
+              </p>
             </div>
           </div>
         </Card>
@@ -280,9 +310,26 @@ export default function AuctionEdit() {
               {selected && (
                 <p className="mt-1 text-xs text-slate-500">
                   參考：貸款餘額 {formatJPY(selected.loanBalance)}
+                  {selected.relistCount > 0 && ` · 這台車已重掛 ${selected.relistCount} 次`}
                 </p>
               )}
             </div>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-slate-200 p-3">
+            <div className="flex items-center gap-2.5">
+              <Checkbox
+                id="reserveApproved"
+                checked={form.reserveApproved}
+                onCheckedChange={(v) => set('reserveApproved', v === true)}
+              />
+              <Label htmlFor="reserveApproved" className="text-sm font-medium">
+                已取得主管核准
+              </Label>
+            </div>
+            <p className="mt-1.5 text-xs text-slate-500">
+              底價低於貸款餘額時需要主管核准。未核准無法上架。
+            </p>
           </div>
         </Card>
 
@@ -370,13 +417,55 @@ export default function AuctionEdit() {
             </div>
           </Card>
         )}
+        <Card className="p-4">
+          <h2 className="mb-1 text-sm font-semibold">上架前檢核清單</h2>
+          <p className="mb-3 text-xs text-slate-500">
+            四項全部通過才能上架。車況資料越完整，車商越敢出價。
+          </p>
+
+          {selected ? (
+            <ul className="space-y-2">
+              {checklist.map((item) => (
+                <li key={item.key} className="flex items-start gap-2.5 text-sm">
+                  {item.ok ? (
+                    <Check className="mt-0.5 size-4 shrink-0 text-emerald-600" />
+                  ) : (
+                    <X className="mt-0.5 size-4 shrink-0 text-rose-600" />
+                  )}
+                  <span>
+                    <span className={cn('block', !item.ok && 'font-medium text-rose-900')}>
+                      {item.label}
+                    </span>
+                    <span className="block text-xs text-slate-500">{item.detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500">請先選擇車輛。</p>
+          )}
+
+          {selected && !canList && (
+            <p className="mt-3 rounded bg-rose-50 px-3 py-2 text-xs text-rose-800">
+              尚有未通過的項目，目前無法上架。照片與文件請到
+              <Link to={`/admin/garage/${selected.id}/edit`} className="mx-1 underline">
+                車輛編輯頁
+              </Link>
+              補齊。
+            </p>
+          )}
+        </Card>
       </fieldset>
 
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="outline" onClick={() => navigate('/admin/auctions')}>
           {readOnly ? '返回' : '取消'}
         </Button>
-        {!readOnly && <Button onClick={submit}>{existing ? '儲存變更' : '建立拍賣'}</Button>}
+        {!readOnly && (
+          <Button onClick={submit} disabled={!canList}>
+            {existing ? '儲存變更' : '建立拍賣'}
+          </Button>
+        )}
       </div>
     </div>
   )

@@ -4,9 +4,8 @@ import {
   acceptNegotiation,
   adjustReserve,
   declineNegotiation,
-  withdrawAuction,
 } from '@/engine/actions'
-import { T0, makeAuction, makeBid, makeData, makeProxy, makeVehicle } from '@/engine/testFixtures'
+import { T0, makeAuction, makeBid, makeData } from '@/engine/testFixtures'
 
 function negotiating() {
   return makeData({
@@ -28,65 +27,6 @@ function negotiating() {
     ],
   })
 }
-
-describe('withdrawAuction', () => {
-  it('未開始的拍賣可撤標，車輛轉為已下架', () => {
-    const d = makeData({
-      auctions: [makeAuction({ status: '未開始', startAt: T0 + 3_600_000 })],
-      vehicles: [makeVehicle({ status: '已排拍' })],
-    })
-    const r = withdrawAuction(d, {
-      auctionId: 'a1',
-      reason: '借款人已清償欠款',
-      byUserId: 'u-staff',
-    })
-    expect(r.error).toBeUndefined()
-    expect(r.data.auctions[0].status).toBe('已撤標')
-    expect(r.data.auctions[0].withdrawReason).toBe('借款人已清償欠款')
-    expect(r.data.auctions[0].withdrawnBy).toBe('u-staff')
-    expect(r.data.vehicles[0].status).toBe('已下架')
-    expect(r.events).toEqual([{ type: 'WITHDRAWN', auctionId: 'a1' }])
-  })
-
-  it('進行中的拍賣可撤標', () => {
-    const r = withdrawAuction(makeData(), {
-      auctionId: 'a1',
-      reason: '車輛有查扣爭議',
-      byUserId: 'u-staff',
-    })
-    expect(r.data.auctions[0].status).toBe('已撤標')
-  })
-
-  it('理由少於 5 字被拒', () => {
-    const r = withdrawAuction(makeData(), {
-      auctionId: 'a1',
-      reason: '不賣',
-      byUserId: 'u-staff',
-    })
-    expect(r.error).toBe('撤標理由至少需 5 個字')
-    expect(r.data.auctions[0].status).toBe('進行中')
-  })
-
-  it('已成交的拍賣不可撤標', () => {
-    const d = makeData({ auctions: [makeAuction({ status: '已成交' })] })
-    const r = withdrawAuction(d, {
-      auctionId: 'a1',
-      reason: '想要下架這台車',
-      byUserId: 'u-staff',
-    })
-    expect(r.error).toBe('只有未開始或進行中的拍賣可以撤標')
-  })
-
-  it('停用該拍賣所有代理出價', () => {
-    const d = makeData({ proxies: [makeProxy({ dealerId: 'd2', maxAmount: 1_000_000 })] })
-    const r = withdrawAuction(d, {
-      auctionId: 'a1',
-      reason: '借款人已清償欠款',
-      byUserId: 'u-staff',
-    })
-    expect(r.data.proxies[0].active).toBe(false)
-  })
-})
 
 describe('acceptNegotiation', () => {
   it('被邀請的車商接受，以底價成交', () => {

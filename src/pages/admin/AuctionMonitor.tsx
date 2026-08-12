@@ -1,4 +1,4 @@
-import { Ban, Handshake, Lock } from 'lucide-react'
+import { Handshake, Lock, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -22,15 +22,24 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { SpecTable } from '@/components/vehicle/SpecTable'
 import { VehiclePhoto } from '@/components/vehicle/VehiclePhoto'
 import { dealerLabel } from '@/data/users'
+import { RELIST_LIMIT } from '@/engine/actions'
+import { TYPE_LABEL } from '@/lib/auctionMeta'
 import { formatJPY } from '@/lib/money'
 import { formatDateTime } from '@/lib/time'
+import { cn } from '@/lib/utils'
 import { useStore } from '@/store/index'
 import { bidCountOf, currentPrice, dealerCountOf } from '@/store/selectors'
 import { useCurrentUser } from '@/store/useCurrentUser'
+import type { Disposition } from '@/types'
+
+const DISPOSITIONS: Array<{ value: Disposition; label: string; hint: string }> = [
+  { value: '待整備', label: '整備後重新上架', hint: '車況是主要問題。可能賣更好，但要先花錢' },
+  { value: '固定價格掛售', label: '轉固定價格長期掛售', hint: '不再佔用拍賣資源，但去化較慢' },
+  { value: '整批出清', label: '整批出清', hint: '一次收回現金，價格較低' },
+]
 
 export default function AuctionMonitor() {
   const { id = '' } = useParams()
@@ -39,8 +48,6 @@ export default function AuctionMonitor() {
   const auction = store.auctions.find((a) => a.id === id)
   const vehicle = auction ? store.vehicles.find((v) => v.id === auction.vehicleId) : undefined
 
-  const [withdrawOpen, setWithdrawOpen] = useState(false)
-  const [reason, setReason] = useState('')
   const [reserveOpen, setReserveOpen] = useState(false)
   const [newReserve, setNewReserve] = useState(0)
 
@@ -59,7 +66,8 @@ export default function AuctionMonitor() {
   const now = () => useClock.getState().virtualNow()
   const sealedBeforeClose =
     auction.type === 'SEALED' && (auction.status === '進行中' || auction.status === '未開始')
-  const canWithdraw = auction.status === '未開始' || auction.status === '進行中'
+  const otherType = auction.type === 'SCHEDULED' ? 'SEALED' : 'SCHEDULED'
+  const canLowerAndRelist = vehicle.relistCount < RELIST_LIMIT
 
   return (
     <div className="max-w-5xl">
@@ -73,11 +81,6 @@ export default function AuctionMonitor() {
               <ButtonLink variant="outline" to={`/admin/auctions/${auction.id}/edit`}>
                 編輯設定
               </ButtonLink>
-            )}
-            {canWithdraw && (
-              <Button variant="outline" onClick={() => setWithdrawOpen(true)}>
-                <Ban className="mr-1 size-4" /> 撤標
-              </Button>
             )}
           </>
         }
@@ -185,14 +188,78 @@ export default function AuctionMonitor() {
         </Card>
       )}
 
-      {auction.status === '已撤標' && (
-        <Card className="mt-4 border-slate-300 bg-slate-50 p-4">
-          <h2 className="text-sm font-semibold">撤標紀錄</h2>
-          <p className="mt-2 text-sm">理由：{auction.withdrawReason}</p>
-          <p className="mt-1 text-xs text-slate-500">
-            操作人：{auction.withdrawnBy ? dealerLabel(auction.withdrawnBy) : '—'}
-            　（車商端只會看到「已下架」，不會看到理由）
+      {auction.status === '已流標' && (
+        <Card className="mt-4 border-rose-200 bg-rose-50 p-4">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-rose-900">
+            <RotateCcw className="size-4" /> 流標後續處理
+          </h2>
+          <p className="mt-2 text-sm text-rose-900">
+            流標原因：{auction.closeReason}。
+            {vehicle.relistCount > 0 && `這台車已經重掛 ${vehicle.relistCount} 次。`}
           </p>
+
+          <div className="mt-3 space-y-2">
+            <div className="rounded-lg border border-rose-200 bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium">
+                  換成「{TYPE_LABEL[otherType]}」重掛
+                  <span className="ml-1.5 rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-normal text-emerald-800">
+                    優先
+                  </span>
+                </span>
+                <ButtonLink
+                  size="sm"
+                  to={`/admin/auctions/new?relistFrom=${auction.id}&type=${otherType}`}
+                >
+                  重新上架
+                </ButtonLink>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                換機制可能吸引到不同買家，而且不會讓車商養成等降價的習慣
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-rose-200 bg-white p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium">調整底價重新上架</span>
+                <ButtonLink
+                  size="sm"
+                  variant="outline"
+                  to={`/admin/auctions/new?relistFrom=${auction.id}`}
+                  className={cn(!canLowerAndRelist && 'pointer-events-none opacity-40')}
+                >
+                  {canLowerAndRelist ? '重新上架' : `已達 ${RELIST_LIMIT} 次上限`}
+                </ButtonLink>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                底價明顯訂太高時有效，但變成慣例後車商會學會等下一輪
+              </p>
+            </div>
+
+            {DISPOSITIONS.map((d) => (
+              <div key={d.value} className="rounded-lg border border-rose-200 bg-white p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm font-medium">{d.label}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={vehicle.disposition === d.value}
+                    onClick={() => {
+                      const r = store.disposeVehicle({
+                        vehicleId: vehicle.id,
+                        disposition: d.value,
+                      })
+                      if (r.ok) toast.success(`已標記為「${d.label}」`)
+                      else toast.error(r.error)
+                    }}
+                  >
+                    {vehicle.disposition === d.value ? '已標記' : '標記'}
+                  </Button>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">{d.hint}</p>
+              </div>
+            ))}
+          </div>
         </Card>
       )}
 
@@ -211,7 +278,7 @@ export default function AuctionMonitor() {
         <div className="min-w-0">
           <h2 className="mb-2 text-sm font-semibold">出價紀錄</h2>
           <p className="mb-2 text-xs text-slate-500">
-            出價者以匿名代號顯示。代理出價只標記來源，不顯示車商設定的上限金額。
+            出價者以匿名代號顯示，公司內部畫面也一樣，避免身分外流造成串通。
           </p>
           <BidHistory auctionId={auction.id} hidden={sealedBeforeClose} />
         </div>
@@ -225,56 +292,6 @@ export default function AuctionMonitor() {
           <SpecTable vehicle={vehicle} showInternal={user?.canSeeReserve ?? false} />
         </div>
       </div>
-
-      <Dialog open={withdrawOpen} onOpenChange={setWithdrawOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>撤標</DialogTitle>
-            <DialogDescription>
-              撤標後車輛轉為「已下架」，所有出價者與關注者都會收到通知。
-              理由僅供內部留存，不會顯示給車商。
-            </DialogDescription>
-          </DialogHeader>
-          <div>
-            <Label htmlFor="withdraw-reason" className="mb-1.5 block text-sm">
-              撤標理由（至少 5 個字）
-            </Label>
-            <Textarea
-              id="withdraw-reason"
-              rows={3}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="例如：借款人已清償欠款，車輛不再處分"
-            />
-            <p className="mt-1 text-xs text-slate-500">{reason.trim().length} / 5</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWithdrawOpen(false)}>
-              取消
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={reason.trim().length < 5}
-              onClick={() => {
-                const r = store.withdraw({
-                  auctionId: auction.id,
-                  reason,
-                  byUserId: user!.id,
-                })
-                if (!r.ok) {
-                  toast.error(r.error)
-                  return
-                }
-                toast.success('已撤標，相關車商已收到通知')
-                setWithdrawOpen(false)
-                setReason('')
-              }}
-            >
-              確認撤標
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={reserveOpen} onOpenChange={setReserveOpen}>
         <DialogContent>

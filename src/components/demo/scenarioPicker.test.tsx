@@ -89,20 +89,10 @@ describe('情境選擇器', () => {
     expect(screen.getAllByText('尚未投標').length).toBeGreaterThan(0)
   })
 
-  it('載入「代理出價互頂」後出價紀錄有代理標記', async () => {
-    const { user } = renderApp({ route: '/dealer/auctions', userId: DEALER_A_ID })
-    await openFull(user)
-
-    await user.click(within(console_()).getByText('代理出價互頂'))
-    await user.click(await screen.findByRole('button', { name: '確認載入' }))
-
-    const bids = useStore.getState().bids.filter((b) => b.auctionId === 'a-run-normal')
-    expect(bids.some((b) => b.kind === 'proxy')).toBe(true)
-  })
 })
 
 describe('重置資料', () => {
-  it('確認重置後回到登入頁，資料回到初始的 14 筆拍賣', async () => {
+  it('確認重置後回到登入頁，資料回到初始的 15 筆拍賣', async () => {
     const { user } = renderApp({ route: '/dealer/auctions', userId: DEALER_A_ID })
     await openFull(user)
 
@@ -114,7 +104,7 @@ describe('重置資料', () => {
     await user.click(await screen.findByRole('button', { name: '確認重置' }))
 
     expect(useStore.getState().currentUserId).toBeNull()
-    expect(useStore.getState().auctions).toHaveLength(14)
+    expect(useStore.getState().auctions).toHaveLength(15)
     expect(useStore.getState().bids.length).toBeLessThan(dirty)
     expect(await screen.findByText(/所有資料皆為假資料/)).toBeInTheDocument()
   })

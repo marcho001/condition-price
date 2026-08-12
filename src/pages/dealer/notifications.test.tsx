@@ -125,25 +125,6 @@ describe('通知會隨動作即時產生', () => {
     ).toBe(true)
   })
 
-  it('撤標後出價者與關注者都收到通知，且內文不含撤標理由', () => {
-    const { unmount } = renderApp({ route: '/admin/auctions', userId: STAFF_ID })
-    unmount()
-
-    useStore.getState().withdraw({
-      auctionId: 'a-run-normal',
-      reason: '借款人已清償欠款',
-      byUserId: STAFF_ID,
-    })
-
-    const withdrawn = useStore
-      .getState()
-      .notifications.filter((n) => n.type === 'WITHDRAWN' && n.auctionId === 'a-run-normal')
-    expect(withdrawn.length).toBeGreaterThan(0)
-    for (const n of withdrawn) {
-      expect(n.body).not.toContain('清償')
-      expect(n.body).toContain('已下架')
-    }
-  })
 })
 
 describe('通知圖示', () => {

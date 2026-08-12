@@ -190,22 +190,6 @@ describe('模擬出價', () => {
       .getState()
       .bids.filter((b) => b.auctionId === 'a-run-normal' && b.dealerId === DEALER_B_ID)
     expect(afterB).toHaveLength(beforeB + 1)
-    expect(afterB.at(-1)!.kind).toBe('manual')
-  })
-
-  it('模擬出價會觸發對手的代理反超（seed 在這筆掛了山田的代理）', async () => {
-    const { user } = renderApp({ route: '/dealer/auctions/a-run-normal', userId: DEALER_A_ID })
-    await openFull(user)
-
-    await user.selectOptions(screen.getByLabelText('選擇車商'), DEALER_B_ID)
-    await user.click(screen.getByRole('button', { name: '加一級距' }))
-
-    const top = useStore
-      .getState()
-      .bids.filter((b) => b.auctionId === 'a-run-normal')
-      .reduce((best, b) => (b.amount > best.amount ? b : best))
-    expect(top.dealerId).toBe(DEALER_A_ID)
-    expect(top.kind).toBe('proxy')
   })
 
   it('只列出進行中的拍賣', async () => {
@@ -263,18 +247,6 @@ describe('強制狀態', () => {
     expect(auctionById('a-run-normal').negotiation).toBeDefined()
   })
 
-  it('強制撤標直接生效，理由自動填入，不彈填寫視窗', async () => {
-    const { user } = renderApp({ route: '/admin/auctions', userId: STAFF_ID })
-    await openFull(user)
-
-    await user.selectOptions(screen.getByLabelText('選擇要操作的拍賣'), 'a-run-normal')
-    await user.click(screen.getByRole('button', { name: '強制撤標' }))
-
-    const a = auctionById('a-run-normal')
-    expect(a.status).toBe('已撤標')
-    expect(a.withdrawReason).toBe('Demo 控制台觸發')
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  })
 })
 
 describe('推送通知', () => {
@@ -293,12 +265,12 @@ describe('推送通知', () => {
     expect(after.at(-1)!.read).toBe(false)
   })
 
-  it('十二種通知類型都可選', async () => {
+  it('十一種通知類型都可選', async () => {
     const { user } = renderApp({ route: '/dealer/auctions', userId: DEALER_A_ID })
     await openFull(user)
 
     const select = screen.getByLabelText('通知類型') as HTMLSelectElement
-    expect(select.options).toHaveLength(12)
+    expect(select.options).toHaveLength(11)
   })
 })
 

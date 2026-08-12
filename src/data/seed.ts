@@ -24,7 +24,6 @@ import type {
   EngineData,
   Grade,
   InteriorGrade,
-  ProxyBid,
   StepMode,
   Vehicle,
   Watch,
@@ -44,7 +43,6 @@ const VEHICLE_STATUS_FOR: Record<AuctionStatus, Vehicle['status']> = {
   議價中: '拍賣中',
   已成交: '已售出',
   已流標: '在庫',
-  已撤標: '已下架',
 }
 
 /** 由這張表決定 14 筆拍賣長什麼樣，避免邏輯散落 */
@@ -64,28 +62,33 @@ type Blueprint = {
   buyNowRatio?: number
   stepMode?: StepMode
   fixedStep?: number
+  /** 預設已核准；設 false 用來示範上架前檢核清單擋下來的樣子 */
+  reserveApproved?: boolean
+  /** 這台車先前已經重掛過幾次 */
+  relistCount?: number
 }
 
 const BLUEPRINTS: Blueprint[] = [
   // 未開始 3 筆
   { key: 'up-scheduled', type: 'SCHEDULED', status: '未開始', startOffset: 2 * HOUR, endOffset: 2 * HOUR + 4 * DAY, bidCount: 0, topRatio: 0 },
-  { key: 'up-live', type: 'LIVE', status: '未開始', startOffset: 30 * MIN, endOffset: 30 * MIN + 90_000, bidCount: 0, topRatio: 0 },
+  { key: 'up-draft', type: 'SCHEDULED', status: '未開始', startOffset: 30 * MIN, endOffset: 30 * MIN + 3 * DAY, bidCount: 0, topRatio: 0, reserveApproved: false },
   { key: 'up-sealed', type: 'SEALED', status: '未開始', startOffset: DAY, endOffset: 3 * DAY, bidCount: 0, topRatio: 0, buyNowRatio: 1.18 },
 
   // 進行中 5 筆
   { key: 'run-normal', type: 'SCHEDULED', status: '進行中', startOffset: -DAY, endOffset: 2 * DAY, bidCount: 5, topRatio: 0.72 },
   { key: 'run-ending-soon', type: 'SCHEDULED', status: '進行中', startOffset: -3 * DAY, endOffset: 8 * MIN, bidCount: 8, topRatio: 0.94 },
   { key: 'run-extended', type: 'SCHEDULED', status: '進行中', startOffset: -4 * DAY, endOffset: 4 * MIN, bidCount: 7, topRatio: 1.04, extendedMs: 9 * MIN },
-  { key: 'run-live', type: 'LIVE', status: '進行中', startOffset: -60_000, endOffset: 60_000, bidCount: 3, topRatio: 0.68 },
+  { key: 'run-quiet', type: 'SCHEDULED', status: '進行中', startOffset: -3 * DAY, endOffset: 4 * DAY, bidCount: 0, topRatio: 0 },
   { key: 'run-sealed', type: 'SEALED', status: '進行中', startOffset: -DAY, endOffset: 2 * DAY, bidCount: 3, topRatio: 0.88, buyNowRatio: 1.15 },
 
   // 議價中 2 筆
   { key: 'nego-a', type: 'SCHEDULED', status: '議價中', startOffset: -5 * DAY, endOffset: -4 * HOUR, bidCount: 6, topRatio: 0.94 },
   { key: 'nego-b', type: 'SEALED', status: '議價中', startOffset: -6 * DAY, endOffset: -20 * HOUR, bidCount: 4, topRatio: 0.92 },
 
-  // 已流標 2 筆
+  // 已流標 3 筆（其中一筆已經重掛過一次，用來示範重掛次數上限）
   { key: 'passed-nobid', type: 'SCHEDULED', status: '已流標', startOffset: -9 * DAY, endOffset: -2 * DAY, bidCount: 0, topRatio: 0 },
   { key: 'passed-low', type: 'SCHEDULED', status: '已流標', startOffset: -10 * DAY, endOffset: -3 * DAY, bidCount: 4, topRatio: 0.78 },
+  { key: 'passed-again', type: 'SEALED', status: '已流標', startOffset: -8 * DAY, endOffset: -DAY, bidCount: 2, topRatio: 0.7, relistCount: 1 },
 
   // 已成交 2 筆
   { key: 'deal-a', type: 'SCHEDULED', status: '已成交', startOffset: -12 * DAY, endOffset: -5 * DAY, bidCount: 9, topRatio: 1.09 },
@@ -108,12 +111,18 @@ export function buildSeed(now: number): {
 
   const flatModels = CATALOG.flatMap((c) => c.models.map((m) => ({ brand: c.brand, spec: m })))
 
-  function makeVehicle(status: Vehicle['status'], createdAt: number) {
+  function makeVehicle(status: Vehicle['status'], createdAt: number, relistCount = 0) {
     const pick = flatModels[vehicleSeq % flatModels.length]
     const spec: ModelSpec = pick.spec
     const year = faker.number.int({ min: spec.yearRange[0], max: spec.yearRange[1] })
     const id = `v${String(++vehicleSeq).padStart(3, '0')}`
     const market = estimateMarketPrice(spec, year, currentYear)
+
+    // 每 5 台留一台照片沒拍齊、文件沒到齊，讓上架前檢核清單有東西可擋
+    const incomplete = vehicleSeq % 5 === 0
+    const photoCount = incomplete
+      ? faker.number.int({ min: 8, max: 15 })
+      : faker.number.int({ min: 20, max: 26 })
 
     const vehicle: Vehicle = {
       id,
@@ -139,11 +148,15 @@ export function buildSeed(now: number): {
       bodyType: spec.bodyType,
       grade: faker.helpers.arrayElement(GRADES),
       interiorGrade: faker.helpers.arrayElement(INTERIOR),
-      photoSeeds: Array.from({ length: 6 }, () => faker.number.int({ min: 1, max: 99_999 })),
+      photoSeeds: Array.from({ length: photoCount }, () =>
+        faker.number.int({ min: 1, max: 99_999 }),
+      ),
       remarks: faker.helpers.arrayElements(REMARK_POOL, { min: 2, max: 3 }).join(' '),
       loanBalance:
         Math.round((market * faker.number.float({ min: 0.72, max: 1.24 })) / 10_000) * 10_000,
       status,
+      documentsReady: !incomplete,
+      relistCount,
       createdAt,
     }
     return { vehicle, market }
@@ -152,13 +165,16 @@ export function buildSeed(now: number): {
   const vehicles: Vehicle[] = []
   const auctions: Auction[] = []
   const bids: Bid[] = []
-  const proxies: ProxyBid[] = []
   const watches: Watch[] = []
   const notifications: AppNotification[] = []
 
   for (const bp of BLUEPRINTS) {
     const createdAt = now + bp.startOffset - DAY
-    const { vehicle, market } = makeVehicle(VEHICLE_STATUS_FOR[bp.status], createdAt)
+    const { vehicle, market } = makeVehicle(
+      VEHICLE_STATUS_FOR[bp.status],
+      createdAt,
+      bp.relistCount ?? 0,
+    )
     vehicles.push(vehicle)
 
     const reservePrice = Math.round((market * 0.82) / 10_000) * 10_000
@@ -176,6 +192,7 @@ export function buildSeed(now: number): {
       originalEndAt: endAt - (bp.extendedMs ?? 0),
       startPrice,
       reservePrice,
+      reserveApproved: bp.reserveApproved ?? true,
       stepMode,
       fixedStep: bp.fixedStep,
       buyNowPrice: bp.buyNowRatio
@@ -206,7 +223,6 @@ export function buildSeed(now: number): {
             dealerId,
             amount: Math.max(startPrice, amount),
             at: auction.startAt + Math.round(span * faker.number.float({ min: 0.1, max: 0.8 })),
-            kind: 'manual',
           })
         })
       } else {
@@ -227,7 +243,6 @@ export function buildSeed(now: number): {
             dealerId: pool[i % pool.length],
             amount,
             at: auction.startAt + Math.round((span * (i + 1)) / (ladder.length + 1)),
-            kind: i > 0 && i % 3 === 0 ? 'proxy' : 'manual',
           })
         })
       }
@@ -269,21 +284,6 @@ export function buildSeed(now: number): {
   })
   faker.helpers.arrayElements(watchable, 2).forEach((a) => {
     watches.push({ auctionId: a.id, dealerId: DEALER_B_ID })
-  })
-
-  // 代理出價：3 筆，掛在進行中的公開競價上
-  const proxyTargets = auctions
-    .filter((a) => a.status === '進行中' && a.type !== 'SEALED')
-    .slice(0, 3)
-  proxyTargets.forEach((a, i) => {
-    const dealerId = [DEALER_A_ID, DEALER_B_ID, 'd-sato'][i]
-    proxies.push({
-      auctionId: a.id,
-      dealerId,
-      maxAmount: Math.round((a.reservePrice * 1.06) / 10_000) * 10_000,
-      active: true,
-      createdAt: a.startAt + HOUR,
-    })
   })
 
   // 歷史通知
@@ -335,7 +335,7 @@ export function buildSeed(now: number): {
   pushNotification(STAFF_ID, 'NO_BID_ALERT', nobid.id, '上架 2 天無人出價', `${label(nobid)} 已上架 2 天仍無人出價。`, 3 * 24 * 60, true)
   pushNotification(STAFF_ID, 'ENDING_BELOW_RESERVE', soon.id, '即將結標未達底價', `${label(soon)} 即將結標，目前最高價仍未達底價。`, 30)
 
-  return { data: { vehicles, auctions, bids, proxies, watches }, notifications }
+  return { data: { vehicles, auctions, bids, watches }, notifications }
 }
 
 /**

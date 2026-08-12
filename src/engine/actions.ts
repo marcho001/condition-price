@@ -1,10 +1,14 @@
 import type { EngineEvent } from '@/engine/events'
 import { NEGOTIATION_WINDOW_MS, highestBid, resolveClose } from '@/engine/rules'
-import type { Auction, AuctionStatus, Bid, EngineData, Vehicle } from '@/types'
+import type { Auction, Bid, Disposition, EngineData, Vehicle } from '@/types'
 
 export type ActionResult = { data: EngineData; events: EngineEvent[]; error?: string }
 
-const WITHDRAWABLE = new Set<AuctionStatus>(['未開始', '進行中'])
+/**
+ * 降價重掛的次數上限（Phase 1 §4.4）。超過就不再開放調降底價重掛，
+ * 避免車商學會「等下一輪比較便宜」。
+ */
+export const RELIST_LIMIT = 2
 
 function patch(data: EngineData, auction: Auction, vehicleStatus?: Vehicle['status']): EngineData {
   return {
@@ -24,36 +28,31 @@ function bidsOf(data: EngineData, auctionId: string): Bid[] {
   return data.bids.filter((b) => b.auctionId === auctionId)
 }
 
-export function withdrawAuction(
+/**
+ * 流標後的非拍賣處置（Phase 1 §4.4 的後三條路徑）。
+ * 前兩條（換方式重掛、調整底價重掛）走的是重新建立一筆拍賣，不在這裡。
+ */
+export function setDisposition(
   data: EngineData,
-  args: { auctionId: string; reason: string; byUserId: string },
+  args: { vehicleId: string; disposition: Disposition },
 ): ActionResult {
-  const auction = find(data, args.auctionId)
-  if (!auction) return { data, events: [], error: '找不到這筆拍賣' }
-  if (!WITHDRAWABLE.has(auction.status)) {
-    return { data, events: [], error: '只有未開始或進行中的拍賣可以撤標' }
-  }
-  if (args.reason.trim().length < 5) {
-    return { data, events: [], error: '撤標理由至少需 5 個字' }
+  const vehicle = data.vehicles.find((v) => v.id === args.vehicleId)
+  if (!vehicle) return { data, events: [], error: '找不到這台車輛' }
+  if (vehicle.status !== '在庫') {
+    return { data, events: [], error: '只有在庫的車輛可以指定後續處置' }
   }
 
-  const next: Auction = {
-    ...auction,
-    status: '已撤標',
-    withdrawReason: args.reason.trim(),
-    withdrawnBy: args.byUserId,
-    negotiation: undefined,
-  }
-  const withVehicle = patch(data, next, '已下架')
+  // 待整備的車還要再上架，留在「在庫」；另外兩條路徑不再佔用拍賣資源
+  const status: Vehicle['status'] = args.disposition === '待整備' ? '在庫' : '已下架'
 
   return {
     data: {
-      ...withVehicle,
-      proxies: withVehicle.proxies.map((p) =>
-        p.auctionId === auction.id ? { ...p, active: false } : p,
+      ...data,
+      vehicles: data.vehicles.map((v) =>
+        v.id === args.vehicleId ? { ...v, disposition: args.disposition, status } : v,
       ),
     },
-    events: [{ type: 'WITHDRAWN', auctionId: auction.id }],
+    events: [],
   }
 }
 

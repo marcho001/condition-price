@@ -3,6 +3,7 @@ import { screen } from '@testing-library/react'
 import { renderApp } from '@/test/renderApp'
 import { STAFF_ID } from '@/data/users'
 import { useStore } from '@/store/index'
+import { MIN_PHOTOS } from '@/store/selectors'
 
 const CAR = () => useStore.getState().vehicles.find((v) => v.status === '在庫')!
 
@@ -72,7 +73,7 @@ describe('新增車輛', () => {
     await user.type(screen.getByLabelText(/訂單號/), 'ORD-2026-9003')
     await user.type(screen.getByLabelText(/車牌/), '横浜 400 さ 55-66')
     await user.type(screen.getByLabelText(/車身號碼/), 'TESTVIN1111111111')
-    for (let i = 6; i >= 1; i--) {
+    for (let i = MIN_PHOTOS; i >= 1; i--) {
       await user.click(screen.getByRole('button', { name: `刪除照片 ${i}` }))
     }
     await user.click(screen.getByRole('button', { name: '預覽並儲存' }))

@@ -4,7 +4,15 @@ import { renderApp } from '@/test/renderApp'
 import { STAFF_ID } from '@/data/users'
 import { useStore } from '@/store/index'
 
-const freeVehicle = () => useStore.getState().vehicles.find((v) => v.status === '在庫')!
+/** 挑一台檢核清單過得了的在庫車：照片與文件都齊 */
+const freeVehicle = () =>
+  useStore
+    .getState()
+    .vehicles.find((v) => v.status === '在庫' && v.documentsReady && v.photoSeeds.length >= 20)!
+
+/** 上架前檢核的最後一項要人工勾選 */
+const approve = (user: { click: (el: Element) => Promise<void> }) =>
+  user.click(screen.getByRole('checkbox', { name: '已取得主管核准' }))
 
 describe('新增拍賣', () => {
   it('從車庫帶 vehicleId 進來時該車已預選', () => {
@@ -40,12 +48,6 @@ describe('新增拍賣', () => {
     expect(screen.queryByLabelText('立即成交價')).not.toBeInTheDocument()
   })
 
-  it('切到即時同步拍時結標時間自動變成開始後 90 秒', async () => {
-    const { user } = renderApp({ route: '/admin/auctions/new', userId: STAFF_ID })
-    await user.click(screen.getByRole('button', { name: /即時同步拍/ }))
-    expect(screen.getByText('即時同步拍建議 60–120 秒。目前設定為 90 秒。')).toBeInTheDocument()
-  })
-
   it('喊價單位切到固定金額會出現輸入框，並更新底部提示', async () => {
     const { user } = renderApp({ route: '/admin/auctions/new', userId: STAFF_ID })
 
@@ -62,6 +64,7 @@ describe('新增拍賣', () => {
     const { user } = renderApp({ route: `/admin/auctions/new?vehicleId=${car.id}`, userId: STAFF_ID })
     const before = useStore.getState().auctions.length
 
+    await approve(user)
     const reserve = screen.getByLabelText(/底價/)
     await user.clear(reserve)
     await user.type(reserve, '100000')
@@ -71,16 +74,37 @@ describe('新增拍賣', () => {
     expect(useStore.getState().auctions).toHaveLength(before)
   })
 
-  it('沒選車輛時被擋下', async () => {
-    const { user } = renderApp({ route: '/admin/auctions/new', userId: STAFF_ID })
-    await user.click(screen.getByRole('button', { name: '建立拍賣' }))
-    expect(screen.getByText('請選擇車輛')).toBeInTheDocument()
+  it('沒選車輛時建立鈕是 disabled', () => {
+    renderApp({ route: '/admin/auctions/new', userId: STAFF_ID })
+    expect(screen.getByText('請先選擇車輛。')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '建立拍賣' })).toBeDisabled()
+  })
+
+  it('底價未核准前建立鈕是 disabled，勾選後才可按', async () => {
+    const car = freeVehicle()
+    const { user } = renderApp({
+      route: `/admin/auctions/new?vehicleId=${car.id}`,
+      userId: STAFF_ID,
+    })
+    expect(screen.getByRole('button', { name: '建立拍賣' })).toBeDisabled()
+    await approve(user)
+    expect(screen.getByRole('button', { name: '建立拍賣' })).toBeEnabled()
+  })
+
+  it('照片或文件不齊的車輛無法上架', () => {
+    const blocked = useStore
+      .getState()
+      .vehicles.find((v) => v.status === '在庫' && (!v.documentsReady || v.photoSeeds.length < 20))!
+    renderApp({ route: `/admin/auctions/new?vehicleId=${blocked.id}`, userId: STAFF_ID })
+    expect(screen.getByText(/尚有未通過的項目/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '建立拍賣' })).toBeDisabled()
   })
 
   it('立即成交價未高於底價時被擋下', async () => {
     const car = freeVehicle()
     const { user } = renderApp({ route: `/admin/auctions/new?vehicleId=${car.id}`, userId: STAFF_ID })
 
+    await approve(user)
     await user.click(screen.getByRole('button', { name: /密封投標/ }))
     await user.type(screen.getByLabelText('立即成交價'), '800000')
     await user.click(screen.getByRole('button', { name: '建立拍賣' }))
@@ -93,6 +117,7 @@ describe('新增拍賣', () => {
     const { user } = renderApp({ route: `/admin/auctions/new?vehicleId=${car.id}`, userId: STAFF_ID })
     const before = useStore.getState().auctions.length
 
+    await approve(user)
     await user.click(screen.getByRole('button', { name: '建立拍賣' }))
 
     expect(useStore.getState().auctions).toHaveLength(before + 1)

@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react'
 import { renderApp } from '@/test/renderApp'
 import { DEALER_A_ID, DEALER_B_ID } from '@/data/users'
 import { useStore } from '@/store/index'
-import { activeProxyOf, currentPrice, myHighestBid } from '@/store/selectors'
+import { currentPrice, myHighestBid } from '@/store/selectors'
 import { nextValidBid } from '@/lib/money'
 
 const auctionById = (id: string) => useStore.getState().auctions.find((a) => a.id === id)!
@@ -94,60 +94,6 @@ describe('詳細頁 — 出價', () => {
   })
 })
 
-describe('詳細頁 — 自動出價', () => {
-  it('設定後顯示自動出價中，並可取消', async () => {
-    const { user } = renderApp({ route: '/dealer/auctions/a-run-live', userId: DEALER_B_ID })
-
-    const input = screen.getByLabelText('出價上限')
-    await user.clear(input)
-    await user.type(input, '900000')
-    await user.click(screen.getByRole('button', { name: '設定自動出價' }))
-
-    expect(await screen.findByText('自動出價中')).toBeInTheDocument()
-    expect(activeProxyOf(useStore.getState(), 'a-run-live', DEALER_B_ID)).not.toBeNull()
-
-    await user.click(screen.getByRole('button', { name: '取消自動出價' }))
-    expect(activeProxyOf(useStore.getState(), 'a-run-live', DEALER_B_ID)).toBeNull()
-  })
-
-  it('別人的代理會自動反超我的手動出價', async () => {
-    // 先讓車商 B 設代理，再用車商 A 手動出價
-    const { unmount } = renderApp({ route: '/dealer/auctions/a-run-live', userId: DEALER_B_ID })
-    unmount()
-
-    const price = currentPrice(useStore.getState(), 'a-run-live')!
-    useStore.getState().setProxyBid({
-      auctionId: 'a-run-live',
-      dealerId: DEALER_B_ID,
-      maxAmount: price + 300_000,
-      now: Date.now(),
-    })
-
-    const afterProxy = currentPrice(useStore.getState(), 'a-run-live')!
-    const min = nextValidBid(auctionById('a-run-live'), afterProxy)
-    useStore.getState().submitBid({
-      auctionId: 'a-run-live',
-      dealerId: DEALER_A_ID,
-      amount: min,
-      now: Date.now(),
-    })
-
-    // A 出價後 B 的代理應該反超，A 不再領先
-    const top = useStore
-      .getState()
-      .bids.filter((b) => b.auctionId === 'a-run-live')
-      .reduce((best, b) => (b.amount > best.amount ? b : best))
-    expect(top.dealerId).toBe(DEALER_B_ID)
-    expect(top.kind).toBe('proxy')
-  })
-
-  it('密封投標沒有自動出價區塊', () => {
-    renderApp({ route: '/dealer/auctions/a-run-sealed', userId: DEALER_A_ID })
-    expect(screen.queryByText('自動出價')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('出價上限')).not.toBeInTheDocument()
-  })
-})
-
 describe('詳細頁 — 密封投標', () => {
   it('沒有一鍵加級距鈕，出價紀錄不揭露', () => {
     renderApp({ route: '/dealer/auctions/a-run-sealed', userId: DEALER_A_ID })
@@ -224,7 +170,7 @@ describe('詳細頁 — 其他狀態', () => {
 
   it('已流標顯示流標原因', () => {
     renderApp({ route: '/dealer/auctions/a-passed-low', userId: DEALER_A_ID })
-    expect(screen.getByText('流標 · 未達底價')).toBeInTheDocument()
+    expect(screen.getAllByText('流標 · 未達底價').length).toBeGreaterThan(0)
   })
 
   it('關注鈕可切換', async () => {
@@ -244,8 +190,11 @@ describe('詳細頁 — 其他狀態', () => {
 
   it('照片輪播可切換', async () => {
     const { user } = renderApp({ route: '/dealer/auctions/a-run-normal', userId: DEALER_A_ID })
-    expect(screen.getByText('1 / 6')).toBeInTheDocument()
+    const total = useStore
+      .getState()
+      .vehicles.find((v) => v.id === auctionById('a-run-normal').vehicleId)!.photoSeeds.length
+    expect(screen.getByText(`1 / ${total}`)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '下一張' }))
-    expect(screen.getByText('2 / 6')).toBeInTheDocument()
+    expect(screen.getByText(`2 / ${total}`)).toBeInTheDocument()
   })
 })

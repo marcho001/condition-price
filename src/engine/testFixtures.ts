@@ -1,4 +1,4 @@
-import type { Auction, Bid, EngineData, ProxyBid, Vehicle } from '@/types'
+import type { Auction, Bid, EngineData, Vehicle } from '@/types'
 
 export const T0 = new Date(2026, 6, 28, 12, 0, 0, 0).getTime()
 
@@ -25,6 +25,8 @@ export function makeVehicle(over: Partial<Vehicle> = {}): Vehicle {
     remarks: '',
     loanBalance: 1_500_000,
     status: '拍賣中',
+    documentsReady: true,
+    relistCount: 0,
     createdAt: T0 - 172_800_000,
     ...over,
   }
@@ -45,6 +47,7 @@ export function makeAuction(over: Partial<Auction> = {}): Auction {
     startAt: T0 - 86_400_000,
     startPrice: 500_000,
     reservePrice: 2_000_000,
+    reserveApproved: true,
     stepMode: 'auto',
     emittedKeys: [],
     createdAt: T0 - 172_800_000,
@@ -60,15 +63,8 @@ export function makeBid(over: Partial<Bid> & { dealerId: string; amount: number 
     id: `b-${over.dealerId}-${over.amount}`,
     auctionId: 'a1',
     at: T0,
-    kind: 'manual',
     ...over,
   }
-}
-
-export function makeProxy(
-  over: Partial<ProxyBid> & { dealerId: string; maxAmount: number },
-): ProxyBid {
-  return { auctionId: 'a1', active: true, createdAt: T0, ...over }
 }
 
 export function makeData(over: Partial<EngineData> = {}): EngineData {
@@ -76,7 +72,6 @@ export function makeData(over: Partial<EngineData> = {}): EngineData {
     vehicles: [makeVehicle()],
     auctions: [makeAuction()],
     bids: [],
-    proxies: [],
     watches: [],
     ...over,
   }

@@ -15,6 +15,7 @@ function auction(over: Partial<Auction> = {}): Auction {
     originalEndAt: T0 + 600_000,
     startPrice: 500_000,
     reservePrice: 1_000_000,
+    reserveApproved: true,
     stepMode: 'auto',
     extendedMs: 0,
     emittedKeys: [],
@@ -24,7 +25,7 @@ function auction(over: Partial<Auction> = {}): Auction {
 }
 
 function bid(dealerId: string, amount: number, at = T0): Bid {
-  return { id: `b-${dealerId}-${amount}`, auctionId: 'a1', dealerId, amount, at, kind: 'manual' }
+  return { id: `b-${dealerId}-${amount}`, auctionId: 'a1', dealerId, amount, at }
 }
 
 describe('softCloseExtension 定時開標', () => {
@@ -48,14 +49,6 @@ describe('softCloseExtension 定時開標', () => {
 })
 
 describe('softCloseExtension 其他拍賣方式', () => {
-  it('即時同步拍用 15 秒窗口', () => {
-    expect(softCloseExtension(auction({ type: 'LIVE', endAt: T0 + 10_000 }), T0)).toBe(15_000)
-  })
-  it('即時同步拍無延長上限', () => {
-    expect(
-      softCloseExtension(auction({ type: 'LIVE', endAt: T0 + 10_000, extendedMs: 10 * 3_600_000 }), T0),
-    ).toBe(15_000)
-  })
   it('密封投標不延長', () => {
     expect(softCloseExtension(auction({ type: 'SEALED', endAt: T0 + 1_000 }), T0)).toBe(0)
   })

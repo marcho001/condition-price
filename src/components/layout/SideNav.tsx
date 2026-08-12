@@ -41,12 +41,17 @@ export function SideNav() {
             icon: Car,
             badge: store.vehicles.filter((v) => v.status === '在庫').length,
           },
-          {
-            to: '/admin/auctions',
-            label: '拍賣管理',
-            icon: Gavel,
-            badge: store.auctions.filter((a) => a.status === '進行中').length,
-          },
+          // 車輛登錄員與系統管理員不做拍賣設定
+          ...(user.staffRole === 'operator'
+            ? [
+                {
+                  to: '/admin/auctions',
+                  label: '拍賣管理',
+                  icon: Gavel,
+                  badge: store.auctions.filter((a) => a.status === '進行中').length,
+                },
+              ]
+            : []),
         ]
       : [
           {

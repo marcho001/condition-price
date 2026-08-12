@@ -20,6 +20,8 @@ export function eventsToNotifications(args: {
   const { events, data, users, now, nextId } = args
   const out: AppNotification[] = []
   const staffIds = users.filter((u) => u.role === 'staff').map((u) => u.id)
+  // 未達底價的提醒帶著底價差額，只能發給看得到底價的人
+  const reserveStaffIds = users.filter((u) => u.role === 'staff' && u.canSeeReserve).map((u) => u.id)
 
   const push = (
     userId: string,
@@ -71,11 +73,9 @@ export function eventsToNotifications(args: {
           'OUTBID',
           auction.id,
           '您的出價已被超越',
-          event.reason === 'proxy_exhausted'
-            ? `${label} 的競價已達您設定的代理出價上限，若要繼續請重新設定。`
-            : `${label} 已有更高出價，目前最高 ${formatJPY(
-                currentPrice(data, auction) ?? auction.startPrice,
-              )}。`,
+          `${label} 已有更高出價，目前最高 ${formatJPY(
+            currentPrice(data, auction) ?? auction.startPrice,
+          )}。`,
         )
         break
 
@@ -148,13 +148,6 @@ export function eventsToNotifications(args: {
         )
         break
 
-      // 刻意不帶 withdrawReason —— 理由涉及借款人資料，只有公司人員在監控頁看得到
-      case 'WITHDRAWN':
-        for (const id of interested) {
-          push(id, 'WITHDRAWN', auction.id, '拍賣已下架', `${label} 已下架，本次拍賣中止。`)
-        }
-        break
-
       case 'NO_BID_ALERT':
         for (const id of staffIds) {
           push(
@@ -169,7 +162,7 @@ export function eventsToNotifications(args: {
 
       case 'ENDING_BELOW_RESERVE': {
         const top = currentPrice(data, auction) ?? 0
-        for (const id of staffIds) {
+        for (const id of reserveStaffIds) {
           push(
             id,
             'ENDING_BELOW_RESERVE',

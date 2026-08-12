@@ -20,7 +20,7 @@ describe('車商拍賣列表 — 底價隔離', () => {
 
   it('同一份資料下，公司人員看得到底價提示、車商看不到', () => {
     // 刻意不用「掃描畫面上是否出現底價金額」來驗證：
-    // 金額都取整到萬位、只有 14 筆拍賣，不同拍賣之間的數字必然會碰撞
+    // 金額都取整到萬位、只有 15 筆拍賣，不同拍賣之間的數字必然會碰撞
     // （例如某筆的最高出價恰好等於另一筆的底價），那樣的測試會誤報。
     // 要守的是「底價提示這個元件不會出現在車商端」這件結構性的事。
     const { unmount } = renderApp({ route: '/dealer/auctions', userId: DEALER_A_ID })
@@ -33,9 +33,9 @@ describe('車商拍賣列表 — 底價隔離', () => {
 })
 
 describe('車商拍賣列表 — 內容', () => {
-  it('顯示全部 14 筆', () => {
+  it('顯示全部 15 筆', () => {
     renderApp({ route: '/dealer/auctions', userId: DEALER_A_ID })
-    expect(cards()).toHaveLength(14)
+    expect(cards()).toHaveLength(15)
   })
 
   it('有出價的進行中拍賣顯示領先或被超越', () => {
@@ -66,7 +66,7 @@ describe('車商拍賣列表 — 內容', () => {
       userId: DEALER_A_ID,
     })
     expect(screen.getByText('流標 · 無人出價')).toBeInTheDocument()
-    expect(screen.getByText('流標 · 未達底價')).toBeInTheDocument()
+    expect(screen.getAllByText('流標 · 未達底價').length).toBeGreaterThan(0)
   })
 
   it('密封投標只顯示自己的投標狀態，不顯示他人金額', () => {

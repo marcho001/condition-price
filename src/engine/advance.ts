@@ -1,5 +1,4 @@
 import type { EngineEvent } from '@/engine/events'
-import { resolveProxyBids } from '@/engine/proxy'
 import {
   BELOW_RESERVE_LEAD_MS,
   ENDING_SOON_LEAD_MS,
@@ -10,7 +9,7 @@ import {
 } from '@/engine/rules'
 import type { Auction, AuctionStatus, Bid, EngineData, Vehicle } from '@/types'
 
-const TERMINAL = new Set<AuctionStatus>(['已流標', '已成交', '已撤標'])
+const TERMINAL = new Set<AuctionStatus>(['已流標', '已成交'])
 
 /**
  * 時間驅動的狀態機。對同一個 now 重複呼叫必須冪等：
@@ -23,13 +22,12 @@ const TERMINAL = new Set<AuctionStatus>(['已流標', '已成交', '已撤標'])
 export function advanceAuctions(
   data: EngineData,
   now: number,
-  nextId: () => string,
 ): { data: EngineData; events: EngineEvent[]; changed: boolean } {
   const events: EngineEvent[] = []
   let changed = false
 
   let vehicles = data.vehicles
-  let bids = data.bids
+  const bids = data.bids
   const auctions: Auction[] = []
 
   for (const original of data.auctions) {
@@ -56,27 +54,6 @@ export function advanceAuctions(
       a = { ...a, status: '進行中' }
       setVehicle('拍賣中')
       emit('STARTED', { type: 'STARTED', auctionId: a.id })
-
-      if (a.type !== 'SEALED') {
-        const r = resolveProxyBids({
-          auction: a,
-          bids: auctionBids(),
-          proxies: data.proxies,
-          now,
-          nextId,
-        })
-        if (r.newBids.length > 0) {
-          bids = [...bids, ...r.newBids]
-          for (const b of r.newBids) {
-            events.push({
-              type: 'NEW_BID',
-              auctionId: a.id,
-              dealerId: b.dealerId,
-              amount: b.amount,
-            })
-          }
-        }
-      }
     }
 
     // 2. 進行中的提醒。刻意放在結標之前，這樣一次快轉跨過整個拍賣時

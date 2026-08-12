@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { placeBid } from '@/engine/bid'
-import { T0, makeAuction, makeData, makeIdGen, makeProxy } from '@/engine/testFixtures'
+import { T0, makeAuction, makeData, makeIdGen } from '@/engine/testFixtures'
 
 describe('placeBid 基本行為', () => {
   it('第一筆出價金額必須等於起標價', () => {
@@ -13,7 +13,7 @@ describe('placeBid 基本行為', () => {
     })
     expect(r.error).toBeUndefined()
     expect(r.data.bids).toHaveLength(1)
-    expect(r.data.bids[0]).toMatchObject({ dealerId: 'd1', amount: 500_000, kind: 'manual' })
+    expect(r.data.bids[0]).toMatchObject({ dealerId: 'd1', amount: 500_000 })
   })
 
   it('產生 NEW_BID 事件', () => {
@@ -44,12 +44,7 @@ describe('placeBid 基本行為', () => {
       now: T0 + 1_000,
       nextId: makeIdGen(),
     })
-    expect(r.events).toContainEqual({
-      type: 'OUTBID',
-      auctionId: 'a1',
-      dealerId: 'd1',
-      reason: 'outbid',
-    })
+    expect(r.events).toContainEqual({ type: 'OUTBID', auctionId: 'a1', dealerId: 'd1' })
   })
 })
 
@@ -209,75 +204,6 @@ describe('placeBid 軟結標', () => {
     })
     expect(r.data.auctions[0].endAt).toBe(T0 + 86_400_000)
     expect(r.events.some((e) => e.type === 'EXTENDED')).toBe(false)
-  })
-})
-
-describe('placeBid 觸發代理出價', () => {
-  it('手動出價低於他人代理上限時代理自動反超', () => {
-    const d = makeData({ proxies: [makeProxy({ dealerId: 'd2', maxAmount: 1_000_000 })] })
-    const r = placeBid(d, {
-      auctionId: 'a1',
-      dealerId: 'd1',
-      amount: 700_000,
-      now: T0,
-      nextId: makeIdGen(),
-    })
-    expect(r.data.bids).toHaveLength(2)
-    expect(r.data.bids[1]).toMatchObject({ dealerId: 'd2', amount: 710_000, kind: 'proxy' })
-    expect(r.events).toContainEqual({
-      type: 'OUTBID',
-      auctionId: 'a1',
-      dealerId: 'd1',
-      reason: 'outbid',
-    })
-  })
-
-  it('代理上限用盡時停用該代理並發 proxy_exhausted', () => {
-    const d = makeData({ proxies: [makeProxy({ dealerId: 'd2', maxAmount: 705_000 })] })
-    const r = placeBid(d, {
-      auctionId: 'a1',
-      dealerId: 'd1',
-      amount: 700_000,
-      now: T0,
-      nextId: makeIdGen(),
-    })
-    expect(r.data.proxies[0].active).toBe(false)
-    expect(r.events).toContainEqual({
-      type: 'OUTBID',
-      auctionId: 'a1',
-      dealerId: 'd2',
-      reason: 'proxy_exhausted',
-    })
-  })
-
-  it('代理反超後也會觸發軟結標延長', () => {
-    const d = makeData({
-      auctions: [makeAuction({ endAt: T0 + 60_000 })],
-      proxies: [makeProxy({ dealerId: 'd2', maxAmount: 1_000_000 })],
-    })
-    const r = placeBid(d, {
-      auctionId: 'a1',
-      dealerId: 'd1',
-      amount: 700_000,
-      now: T0,
-      nextId: makeIdGen(),
-    })
-    expect(r.data.auctions[0].extendedMs).toBe(180_000)
-  })
-
-  it('密封投標不觸發代理', () => {
-    const d = makeData({
-      auctions: [makeAuction({ type: 'SEALED' })],
-      proxies: [makeProxy({ dealerId: 'd2', maxAmount: 1_000_000 })],
-    })
-    const r = placeBid(d, {
-      auctionId: 'a1',
-      dealerId: 'd1',
-      amount: 700_000,
-      now: T0,
-      nextId: makeIdGen(),
-    })
-    expect(r.data.bids).toHaveLength(1)
   })
 })
 

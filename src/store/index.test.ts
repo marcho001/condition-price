@@ -15,8 +15,8 @@ const auctionById = (id: string) => state().auctions.find((a) => a.id === id)!
 
 describe('reset 與登入', () => {
   it('reset 載入 seed 資料', () => {
-    expect(state().auctions).toHaveLength(14)
-    expect(state().vehicles).toHaveLength(26)
+    expect(state().auctions).toHaveLength(15)
+    expect(state().vehicles).toHaveLength(27)
     expect(state().notifications.length).toBeGreaterThan(0)
   })
 
@@ -125,75 +125,7 @@ describe('advance', () => {
   })
 })
 
-describe('代理出價與關注', () => {
-  it('setProxyBid 會立刻觸發代理反超', () => {
-    const price = currentPrice(state(), 'a-run-normal')!
-    const r = state().setProxyBid({
-      auctionId: 'a-run-normal',
-      dealerId: DEALER_B_ID,
-      maxAmount: price + 500_000,
-      now: NOW,
-    })
-    expect(r).toEqual({ ok: true })
-    expect(currentPrice(state(), 'a-run-normal')).toBeGreaterThan(price)
-  })
-
-  it('代理上限低於合法出價被拒', () => {
-    const price = currentPrice(state(), 'a-run-normal')!
-    const r = state().setProxyBid({
-      auctionId: 'a-run-normal',
-      dealerId: DEALER_B_ID,
-      maxAmount: price - 100_000,
-      now: NOW,
-    })
-    expect(r.ok).toBe(false)
-  })
-
-  it('密封投標不支援代理出價', () => {
-    const r = state().setProxyBid({
-      auctionId: 'a-run-sealed',
-      dealerId: DEALER_B_ID,
-      maxAmount: 9_000_000,
-      now: NOW,
-    })
-    expect(r).toEqual({ ok: false, error: '密封投標不支援代理出價' })
-  })
-
-  it('同一車商重設代理會覆蓋舊的而非新增', () => {
-    const price = currentPrice(state(), 'a-run-normal')!
-    const countFor = () =>
-      state().proxies.filter((p) => p.auctionId === 'a-run-normal' && p.dealerId === DEALER_B_ID)
-        .length
-    state().setProxyBid({
-      auctionId: 'a-run-normal',
-      dealerId: DEALER_B_ID,
-      maxAmount: price + 200_000,
-      now: NOW,
-    })
-    expect(countFor()).toBe(1)
-    state().setProxyBid({
-      auctionId: 'a-run-normal',
-      dealerId: DEALER_B_ID,
-      maxAmount: price + 400_000,
-      now: NOW,
-    })
-    expect(countFor()).toBe(1)
-  })
-
-  it('cancelProxyBid 移除該車商的代理', () => {
-    const price = currentPrice(state(), 'a-run-normal')!
-    state().setProxyBid({
-      auctionId: 'a-run-normal',
-      dealerId: DEALER_B_ID,
-      maxAmount: price + 200_000,
-      now: NOW,
-    })
-    state().cancelProxyBid({ auctionId: 'a-run-normal', dealerId: DEALER_B_ID })
-    expect(
-      state().proxies.some((p) => p.auctionId === 'a-run-normal' && p.dealerId === DEALER_B_ID),
-    ).toBe(false)
-  })
-
+describe('關注', () => {
   it('toggleWatch 可加可移除', () => {
     const id = state().auctions[0].id
     const has = () => state().watches.some((w) => w.auctionId === id && w.dealerId === DEALER_B_ID)
@@ -205,29 +137,7 @@ describe('代理出價與關注', () => {
   })
 })
 
-describe('撤標與議價', () => {
-  it('撤標成功並產生通知', () => {
-    const before = state().notifications.length
-    const r = state().withdraw({
-      auctionId: 'a-run-normal',
-      reason: '借款人已清償欠款',
-      byUserId: STAFF_ID,
-    })
-    expect(r).toEqual({ ok: true })
-    expect(auctionById('a-run-normal').status).toBe('已撤標')
-    expect(state().notifications.length).toBeGreaterThan(before)
-  })
-
-  it('撤標理由太短被拒', () => {
-    const r = state().withdraw({
-      auctionId: 'a-run-normal',
-      reason: '不賣',
-      byUserId: STAFF_ID,
-    })
-    expect(r.ok).toBe(false)
-    expect(auctionById('a-run-normal').status).toBe('進行中')
-  })
-
+describe('議價', () => {
   it('議價對象接受後成交', () => {
     const a = auctionById('a-nego-a')
     const r = state().acceptNegotiationAs({
@@ -327,13 +237,14 @@ describe('saveAuction', () => {
       originalEndAt: NOW + 3_600_000 + 86_400_000,
       startPrice: 500_000,
       reservePrice: 900_000,
+      reserveApproved: true,
       stepMode: 'auto',
       extendedMs: 0,
       emittedKeys: [],
       createdAt: NOW,
     })
     expect(r).toEqual({ ok: true })
-    expect(state().auctions).toHaveLength(15)
+    expect(state().auctions).toHaveLength(16)
     expect(state().vehicles.find((v) => v.id === free.id)!.status).toBe('已排拍')
   })
 })

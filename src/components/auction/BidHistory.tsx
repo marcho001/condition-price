@@ -1,4 +1,3 @@
-import { Bot } from 'lucide-react'
 import { dealerLabel } from '@/data/users'
 import { formatJPY } from '@/lib/money'
 import { formatDateTime } from '@/lib/time'
@@ -9,8 +8,8 @@ import { anonCodesFor, bidsOf } from '@/store/selectors'
 /**
  * 出價紀錄時間軸。
  *
- * revealIdentity 預設關閉——全站都用匿名代號（提案 8.1：隱藏出價者身分
- * 以抑制買方聯合）。永遠不顯示代理出價的上限金額。
+ * revealIdentity 預設關閉——全站都用匿名代號（Phase 1 §4.1：隱藏出價者身分
+ * 以抑制買方私下串通）。
  */
 export function BidHistory({
   auctionId,
@@ -62,14 +61,6 @@ export function BidHistory({
               {revealIdentity ? dealerLabel(b.dealerId) : codes.get(b.dealerId)}
               {isMine && <span className="ml-1 text-xs text-slate-500">（您）</span>}
             </span>
-            {b.kind === 'proxy' && (
-              <span
-                title="由代理出價自動代出"
-                className="flex shrink-0 items-center gap-1 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600"
-              >
-                <Bot className="size-3" /> 代理
-              </span>
-            )}
             <span className="w-32 shrink-0 text-right tabular-nums">{formatJPY(b.amount)}</span>
           </li>
         )

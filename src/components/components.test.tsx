@@ -51,21 +51,16 @@ describe('Countdown', () => {
 })
 
 describe('StatusBadge', () => {
-  const statuses: AuctionStatus[] = ['未開始', '進行中', '議價中', '已流標', '已成交', '已撤標']
+  const statuses: AuctionStatus[] = ['未開始', '進行中', '議價中', '已流標', '已成交']
 
-  it('六種狀態各有不同色票', () => {
+  it('五種狀態各有不同色票', () => {
     const classes = statuses.map((s) => {
       const { unmount } = render(<StatusBadge status={s} />)
       const cls = screen.getByText(s).className
       unmount()
       return cls
     })
-    expect(new Set(classes).size).toBe(6)
-  })
-
-  it('已撤標帶刪除線', () => {
-    render(<StatusBadge status="已撤標" />)
-    expect(screen.getByText('已撤標').className).toContain('line-through')
+    expect(new Set(classes).size).toBe(5)
   })
 })
 

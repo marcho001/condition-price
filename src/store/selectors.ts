@@ -6,7 +6,6 @@ import type {
   AuctionType,
   Bid,
   EngineData,
-  ProxyBid,
   Vehicle,
   VehicleStatus,
 } from '@/types'
@@ -69,15 +68,67 @@ export function isWatched(
   return data.watches.some((w) => w.auctionId === auctionId && w.dealerId === dealerId)
 }
 
-export function activeProxyOf(
-  data: Pick<EngineData, 'proxies'>,
-  auctionId: string,
-  dealerId: string,
-): ProxyBid | null {
-  return (
-    data.proxies.find((p) => p.auctionId === auctionId && p.dealerId === dealerId && p.active) ??
-    null
+/** Phase 1 §2.3 建議的最少照片張數 */
+export const MIN_PHOTOS = 20
+
+export type ChecklistItem = {
+  key: string
+  label: string
+  ok: boolean
+  detail: string
+}
+
+/**
+ * 上架前檢核清單（Phase 1 §2.2）。
+ * 回傳的是「事實」而不是「能不能上架」——要不要擋，由呼叫端決定。
+ */
+export function listingChecklist(vehicle: Vehicle, auction: Auction | null): ChecklistItem[] {
+  const missingFields = (
+    [
+      ['車身號碼', vehicle.vin],
+      ['車牌', vehicle.plate],
+      ['廠牌', vehicle.brand],
+      ['車型', vehicle.model],
+      ['顏色', vehicle.color],
+    ] as const
   )
+    .filter(([, value]) => !String(value ?? '').trim())
+    .map(([name]) => name)
+
+  return [
+    {
+      key: 'photos',
+      label: `照片至少 ${MIN_PHOTOS} 張`,
+      ok: vehicle.photoSeeds.length >= MIN_PHOTOS,
+      detail: `目前 ${vehicle.photoSeeds.length} 張`,
+    },
+    {
+      key: 'fields',
+      label: '必填欄位齊全',
+      ok: missingFields.length === 0 && vehicle.mileage > 0 && vehicle.year > 0,
+      detail: missingFields.length === 0 ? '已填齊' : `尚缺：${missingFields.join('、')}`,
+    },
+    {
+      key: 'documents',
+      label: '文件到齊',
+      ok: vehicle.documentsReady,
+      detail: vehicle.documentsReady ? '行照與紀錄已備齊' : '行照、保養／驗車紀錄尚未到齊',
+    },
+    {
+      key: 'reserve',
+      label: '底價已核准',
+      ok: auction?.reserveApproved ?? false,
+      detail: auction
+        ? auction.reserveApproved
+          ? '已核准'
+          : '尚未核准'
+        : '尚未建立拍賣',
+    },
+  ]
+}
+
+export function checklistPassed(items: ChecklistItem[]): boolean {
+  return items.every((i) => i.ok)
 }
 
 export function notificationsFor(

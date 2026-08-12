@@ -15,7 +15,10 @@ import { useStore } from '@/store/index'
 import { bidCountOf, currentPrice, dealerCountOf, isLeading, isWatched, myHighestBid } from '@/store/selectors'
 import type { Auction, Vehicle } from '@/types'
 
-export type CardViewer = { kind: 'staff' } | { kind: 'dealer'; dealerId: string }
+/** 公司人員也不一定看得到底價——車輛登錄員與系統管理員就看不到（Phase 1 §1.1） */
+export type CardViewer =
+  | { kind: 'staff'; canSeeReserve: boolean }
+  | { kind: 'dealer'; dealerId: string }
 
 export function AuctionCard({
   auction,
@@ -42,12 +45,7 @@ export function AuctionCard({
   const watched = dealerId ? isWatched(store, auction.id, dealerId) : false
 
   return (
-    <Card
-      className={cn(
-        'flex flex-col gap-0 overflow-hidden p-0 transition hover:shadow-md',
-        auction.status === '已撤標' && 'opacity-60 saturate-50',
-      )}
-    >
+    <Card className="flex flex-col gap-0 overflow-hidden p-0 transition hover:shadow-md">
       <Link to={to} className="relative block" aria-label={`${vehicle.brand} ${vehicle.model} 詳細`}>
         <VehiclePhoto
           seed={vehicle.photoSeeds[0]}
@@ -98,8 +96,6 @@ export function AuctionCard({
                 </span>
               )}
             </div>
-          ) : auction.status === '已撤標' ? (
-            <span className="text-xs text-slate-500">已下架</span>
           ) : sealedBefore ? (
             <div>
               <p className="text-xs text-slate-500">密封投標中</p>
@@ -133,7 +129,7 @@ export function AuctionCard({
             <Countdown to={auction.negotiation.deadline} prefix="議價剩餘" />
           ) : null}
 
-          {viewer.kind === 'staff' && auction.status !== '已撤標' && (
+          {viewer.kind === 'staff' && viewer.canSeeReserve && (
             <ReserveHint reservePrice={auction.reservePrice} currentPrice={price} />
           )}
 

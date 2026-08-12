@@ -13,7 +13,6 @@ const VEHICLE_STATUS_FOR: Record<AuctionStatus, string> = {
   議價中: '拍賣中',
   已成交: '已售出',
   已流標: '在庫',
-  已撤標: '已下架',
 }
 
 function countByStatus(statuses: AuctionStatus[]) {
@@ -24,38 +23,36 @@ function countByStatus(statuses: AuctionStatus[]) {
 }
 
 describe('buildSeed 資料組成', () => {
-  it('產生 26 台車輛：14 台綁定拍賣、12 台純在庫', () => {
+  it('產生 27 台車輛：15 台綁定拍賣、12 台純在庫', () => {
     const { data } = buildSeed(NOW)
-    expect(data.vehicles).toHaveLength(26)
+    expect(data.vehicles).toHaveLength(27)
 
     const bound = new Set(data.auctions.map((a) => a.vehicleId))
     expect(data.vehicles.filter((v) => !bound.has(v.id))).toHaveLength(12)
   })
 
-  it('可排拍的車輛 = 12 台純在庫 + 2 台流標退回', () => {
+  it('可排拍的車輛 = 12 台純在庫 + 3 台流標退回', () => {
     const { data } = buildSeed(NOW)
-    // 流標的拍賣會把車輛退回「在庫」，所以可排拍的比純在庫多 2 台
-    expect(data.vehicles.filter((v) => v.status === '在庫')).toHaveLength(14)
+    // 流標的拍賣會把車輛退回「在庫」，所以可排拍的比純在庫多 3 台
+    expect(data.vehicles.filter((v) => v.status === '在庫')).toHaveLength(15)
   })
 
-  it('產生 14 筆拍賣，狀態分布符合規格', () => {
+  it('產生 15 筆拍賣，狀態分布符合規格', () => {
     const { data } = buildSeed(NOW)
-    expect(data.auctions).toHaveLength(14)
+    expect(data.auctions).toHaveLength(15)
     expect(countByStatus(data.auctions.map((a) => a.status))).toEqual({
       未開始: 3,
       進行中: 5,
       議價中: 2,
-      已流標: 2,
+      已流標: 3,
       已成交: 2,
     })
   })
 
-  it('三種拍賣方式都出現在進行中的拍賣裡', () => {
+  it('兩種拍賣方式都出現在進行中的拍賣裡', () => {
     const { data } = buildSeed(NOW)
     const running = data.auctions.filter((a) => a.status === '進行中')
-    expect(new Set(running.map((a) => a.type))).toEqual(
-      new Set(['SCHEDULED', 'LIVE', 'SEALED']),
-    )
+    expect(new Set(running.map((a) => a.type))).toEqual(new Set(['SCHEDULED', 'SEALED']))
   })
 
   it('每筆拍賣都對應一台存在的車輛，且無重複綁定', () => {
@@ -82,11 +79,12 @@ describe('buildSeed 資料組成', () => {
     }
   })
 
-  it('每台車有 6 張照片 seed', () => {
+  it('多數車輛照片達上架門檻，少數刻意不足以示範檢核', () => {
     const { data } = buildSeed(NOW)
-    for (const v of data.vehicles) {
-      expect(v.photoSeeds).toHaveLength(6)
-    }
+    expect(data.vehicles.filter((v) => v.photoSeeds.length >= 20).length).toBeGreaterThan(
+      data.vehicles.length / 2,
+    )
+    expect(data.vehicles.some((v) => v.photoSeeds.length < 20)).toBe(true)
   })
 
   it('底價不低於起標價', () => {
@@ -149,10 +147,9 @@ describe('buildSeed 示範用的關鍵情境', () => {
     expect(new Set(bids.map((b) => b.dealerId)).size).toBe(bids.length)
   })
 
-  it('有預設的關注與代理出價', () => {
+  it('有預設的關注', () => {
     const { data } = buildSeed(NOW)
     expect(data.watches.length).toBeGreaterThanOrEqual(3)
-    expect(data.proxies.length).toBeGreaterThanOrEqual(3)
   })
 
   it('已成交的拍賣有 deal，已流標的有 closeReason', () => {
@@ -169,16 +166,14 @@ describe('buildSeed 示範用的關鍵情境', () => {
 describe('buildSeed 與引擎的相容性', () => {
   it('剛產生的資料立刻跑一次引擎不會噴出任何事件', () => {
     const { data } = buildSeed(NOW)
-    let n = 0
-    const r = advanceAuctions(data, NOW, () => `x${++n}`)
+    const r = advanceAuctions(data, NOW)
     expect(r.events).toEqual([])
     expect(r.changed).toBe(false)
   })
 
   it('往前快轉 1 小時後即將結標的拍賣會結束', () => {
     const { data } = buildSeed(NOW)
-    let n = 0
-    const r = advanceAuctions(data, NOW + 3_600_000, () => `x${++n}`)
+    const r = advanceAuctions(data, NOW + 3_600_000)
     expect(r.changed).toBe(true)
     expect(r.events.some((e) => e.type === 'CLOSED_DEAL' || e.type === 'CLOSED_PASSED')).toBe(true)
   })

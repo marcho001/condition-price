@@ -8,17 +8,17 @@ function cards() {
 }
 
 describe('公司端拍賣列表', () => {
-  it('顯示全部 14 筆拍賣', () => {
+  it('顯示全部 15 筆拍賣', () => {
     renderApp({ route: '/admin/auctions', userId: STAFF_ID })
-    expect(cards()).toHaveLength(14)
-    expect(screen.getByText('14 筆')).toBeInTheDocument()
+    expect(cards()).toHaveLength(15)
+    expect(screen.getByText('15 筆')).toBeInTheDocument()
   })
 
   it('進行中與議價中排在最前面', () => {
     renderApp({ route: '/admin/auctions', userId: STAFF_ID })
     // 用 span 限定，否則會選到篩選列的同名按鈕
     const badges = screen
-      .getAllByText(/^(未開始|進行中|議價中|已流標|已成交|已撤標)$/, { selector: 'span' })
+      .getAllByText(/^(未開始|進行中|議價中|已流標|已成交)$/, { selector: 'span' })
       .map((el) => el.textContent)
     expect(badges.slice(0, 5).every((s) => s === '進行中')).toBe(true)
     expect(badges.slice(5, 7).every((s) => s === '議價中')).toBe(true)
@@ -35,8 +35,8 @@ describe('公司端拍賣列表', () => {
   it('依拍賣方式篩選', async () => {
     const { user } = renderApp({ route: '/admin/auctions', userId: STAFF_ID })
     await user.click(screen.getByRole('button', { name: '密封投標' }))
-    // seed 有 4 筆密封標：1 未開始、1 進行中、1 議價中、1 已成交
-    expect(cards()).toHaveLength(4)
+    // seed 有 5 筆密封標：1 未開始、1 進行中、1 議價中、1 已流標、1 已成交
+    expect(cards()).toHaveLength(5)
   })
 
   it('拍賣方式與狀態可疊加篩選', async () => {
@@ -60,7 +60,7 @@ describe('公司端拍賣列表', () => {
       userId: STAFF_ID,
     })
     expect(screen.getByText('流標 · 無人出價')).toBeInTheDocument()
-    expect(screen.getByText('流標 · 未達底價')).toBeInTheDocument()
+    expect(screen.getAllByText('流標 · 未達底價').length).toBeGreaterThan(0)
   })
 
   it('密封投標進行中只顯示投標家數，不顯示金額', () => {

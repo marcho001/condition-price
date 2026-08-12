@@ -6,7 +6,6 @@ import { BidPanel } from '@/components/auction/BidPanel'
 import { Countdown } from '@/components/auction/Countdown'
 import { Money } from '@/components/auction/Money'
 import { NegotiationPanel } from '@/components/auction/NegotiationPanel'
-import { ProxyBidPanel } from '@/components/auction/ProxyBidPanel'
 import { StatusBadge } from '@/components/auction/StatusBadge'
 import { TypeBadge } from '@/components/auction/TypeBadge'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -138,8 +137,6 @@ export default function AuctionDetail() {
                     <p className="mt-2 text-xs text-slate-500">最高出價 {formatJPY(price)}</p>
                   )}
                 </>
-              ) : auction.status === '已撤標' ? (
-                <p className="text-sm text-slate-500">此拍賣已下架，本次競價中止。</p>
               ) : sealedBeforeClose ? (
                 <>
                   <p className="text-xs text-slate-500">密封投標中</p>
@@ -187,12 +184,7 @@ export default function AuctionDetail() {
             )}
           </div>
 
-          {auction.status === '進行中' && (
-            <>
-              <BidPanel auction={auction} dealerId={user.id} />
-              <ProxyBidPanel auction={auction} dealerId={user.id} />
-            </>
-          )}
+          {auction.status === '進行中' && <BidPanel auction={auction} dealerId={user.id} />}
 
           {auction.status === '議價中' && (
             <NegotiationPanel auction={auction} dealerId={user.id} />

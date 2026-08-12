@@ -1,6 +1,5 @@
 import { buildSeed } from '@/data/seed'
 import { ALL_DEALER_IDS, DEALER_A_ID, DEALER_B_ID } from '@/data/users'
-import { placeBid } from '@/engine/bid'
 import { bidStepFor } from '@/lib/money'
 import type { AppNotification, Auction, Bid, EngineData } from '@/types'
 
@@ -13,6 +12,7 @@ export type Scenario = {
 
 const MIN = 60_000
 const HOUR = 3_600_000
+const DAY = 86_400_000
 
 function replaceAuction(data: EngineData, next: Auction): EngineData {
   return { ...data, auctions: data.auctions.map((a) => (a.id === next.id ? next : a)) }
@@ -22,7 +22,7 @@ function replaceAuction(data: EngineData, next: Auction): EngineData {
 function relayBids(
   data: EngineData,
   auctionId: string,
-  ladder: Array<{ dealerId: string; amount: number; at: number; kind?: Bid['kind'] }>,
+  ladder: Array<{ dealerId: string; amount: number; at: number }>,
 ): EngineData {
   const others = data.bids.filter((b) => b.auctionId !== auctionId)
   const fresh: Bid[] = ladder.map((x, i) => ({
@@ -31,7 +31,6 @@ function relayBids(
     dealerId: x.dealerId,
     amount: x.amount,
     at: x.at,
-    kind: x.kind ?? 'manual',
   }))
   return { ...data, bids: [...others, ...fresh] }
 }
@@ -162,9 +161,6 @@ export const SCENARIOS: ReadonlyArray<Scenario> = [
         ...next,
         emittedKeys: emittedFor(next, now, ladder[ladder.length - 1].amount),
       })
-
-      // 山田的代理若還在會立刻反超，與情境衝突
-      data = { ...data, proxies: data.proxies.filter((p) => p.auctionId !== base.id) }
 
       return {
         data,
@@ -309,76 +305,62 @@ export const SCENARIOS: ReadonlyArray<Scenario> = [
   },
 
   {
-    key: 'proxy-war',
-    label: '代理出價互頂',
-    description: '兩家車商都設了代理，價格自動被推到其中一方上限',
+    key: 'passed',
+    label: '流標待處理',
+    description: '最高價差底價超過 10% 而流標，營運要決定後續怎麼走',
     build: (now) => {
       const seed = buildSeed(now)
       let data = seed.data
       const base = data.auctions.find((a) => a.id === TARGET)!
 
-      data = relayBids(data, base.id, [])
-      const endAt = now + 8 * HOUR
-      const withTime: Auction = {
-        ...base,
-        endAt,
-        originalEndAt: endAt,
-        extendedMs: 0,
-        emittedKeys: ['STARTED'],
-      }
-      data = replaceAuction(data, withTime)
+      // 最高價只到底價的 78%，超過 10% 門檻，所以是流標而不是議價
+      const top = Math.round((base.reservePrice * 0.78) / 10_000) * 10_000
+      const step = bidStepFor(top, base.stepMode, base.fixedStep)
+      data = relayBids(data, base.id, [
+        { dealerId: DEALER_B_ID, amount: top - step * 2, at: now - 3 * DAY },
+        { dealerId: 'd-sato', amount: top - step, at: now - 2 * DAY },
+        { dealerId: DEALER_A_ID, amount: top, at: now - DAY },
+      ])
 
-      const step = bidStepFor(base.startPrice, base.stepMode, base.fixedStep)
+      data = replaceAuction(data, {
+        ...base,
+        status: '已流標',
+        closeReason: '未達底價',
+        endAt: now - 2 * HOUR,
+        originalEndAt: now - 2 * HOUR,
+        emittedKeys: ['STARTED'],
+      })
       data = {
         ...data,
-        proxies: [
-          ...data.proxies.filter((p) => p.auctionId !== base.id),
-          {
-            auctionId: base.id,
-            dealerId: DEALER_B_ID,
-            maxAmount: base.startPrice + step * 12,
-            active: true,
-            createdAt: now - 2 * HOUR,
-          },
-          {
-            auctionId: base.id,
-            dealerId: 'd-sato',
-            maxAmount: base.startPrice + step * 20,
-            active: true,
-            createdAt: now - HOUR,
-          },
-        ],
+        vehicles: data.vehicles.map((v) =>
+          v.id === base.vehicleId ? { ...v, status: '在庫' } : v,
+        ),
       }
 
-      // 讓引擎真的跑一次互頂，結果才與規則一致
-      let seq = 0
-      const placed = placeBid(data, {
-        auctionId: base.id,
-        dealerId: DEALER_A_ID,
-        amount: base.startPrice,
-        now: now - 30 * MIN,
-        nextId: () => `sc-pw-${++seq}`,
-      })
-      data = placed.data
+      return { data, notifications: seed.notifications }
+    },
+  },
 
-      // placeBid 可能觸發軟結標延長，重新對齊事件鍵
-      const after = data.auctions.find((a) => a.id === base.id)!
-      data = replaceAuction(data, { ...after, emittedKeys: emittedFor(after, now, null) })
+  {
+    key: 'checklist-blocked',
+    label: '上架前檢核沒過',
+    description: '照片不足、文件未到齊、底價未核准，拍賣被擋在上架前',
+    build: (now) => {
+      const seed = buildSeed(now)
+      let data = seed.data
+      const base = data.auctions.find((a) => a.id === 'a-up-draft')!
 
-      return {
-        data,
-        notifications: [
-          ...seed.notifications,
-          note(
-            DEALER_A_ID,
-            'OUTBID',
-            base.id,
-            '您的出價已被超越',
-            '對方設有代理出價，價格已被自動推高。',
-            now - 29 * MIN,
-          ),
-        ],
+      data = replaceAuction(data, { ...base, reserveApproved: false })
+      data = {
+        ...data,
+        vehicles: data.vehicles.map((v) =>
+          v.id === base.vehicleId
+            ? { ...v, documentsReady: false, photoSeeds: v.photoSeeds.slice(0, 9) }
+            : v,
+        ),
       }
+
+      return { data, notifications: seed.notifications }
     },
   },
 ]

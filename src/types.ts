@@ -1,8 +1,12 @@
 export type Role = 'staff' | 'dealer'
 
+/** Phase 1 的三個內部角色。dealer 沒有這個欄位。 */
+export type StaffRole = 'registrar' | 'operator' | 'admin'
+
 export type User = {
   id: string
   role: Role
+  staffRole?: StaffRole
   name: string
   company?: string
   loginable: boolean
@@ -16,6 +20,9 @@ export type BodyType = '房車' | 'SUV' | '七人車' | '輕自動車' | '商用
 export type Grade = 'S' | '5' | '4.5' | '4' | '3.5' | '3' | '2' | 'R'
 export type InteriorGrade = 'A' | 'B' | 'C' | 'D'
 export type VehicleStatus = '在庫' | '已排拍' | '拍賣中' | '已售出' | '已下架'
+
+/** 流標後的非拍賣處置路徑（Phase 1 §4.4） */
+export type Disposition = '待整備' | '固定價格掛售' | '整批出清'
 
 export type Vehicle = {
   id: string
@@ -39,11 +46,16 @@ export type Vehicle = {
   remarks: string
   loanBalance: number
   status: VehicleStatus
+  /** 上架前檢核用：行照、保養紀錄、驗車紀錄等文件是否到齊 */
+  documentsReady: boolean
+  /** 這台車已經重新上架幾次，用來擋掉無限降價重掛 */
+  relistCount: number
+  disposition?: Disposition
   createdAt: number
 }
 
-export type AuctionType = 'SCHEDULED' | 'LIVE' | 'SEALED'
-export type AuctionStatus = '未開始' | '進行中' | '議價中' | '已流標' | '已成交' | '已撤標'
+export type AuctionType = 'SCHEDULED' | 'SEALED'
+export type AuctionStatus = '未開始' | '進行中' | '議價中' | '已流標' | '已成交'
 export type CloseReason = '無人出價' | '未達底價' | '議價失敗'
 export type StepMode = 'auto' | 'fixed'
 
@@ -70,15 +82,17 @@ export type Auction = {
   originalEndAt: number
   startPrice: number
   reservePrice: number
+  /** 底價已經過核准。上架前檢核清單的其中一項。 */
+  reserveApproved: boolean
   stepMode: StepMode
   fixedStep?: number
   buyNowPrice?: number
   extendedMs: number
-  withdrawReason?: string
-  withdrawnBy?: string
   closeReason?: CloseReason
   deal?: Deal
   negotiation?: Negotiation
+  /** 這筆拍賣是從哪一筆流標的拍賣重掛出來的 */
+  relistedFromId?: string
   emittedKeys: string[]
   createdAt: number
 }
@@ -89,15 +103,6 @@ export type Bid = {
   dealerId: string
   amount: number
   at: number
-  kind: 'manual' | 'proxy'
-}
-
-export type ProxyBid = {
-  auctionId: string
-  dealerId: string
-  maxAmount: number
-  active: boolean
-  createdAt: number
 }
 
 export type Watch = {
@@ -114,7 +119,6 @@ export type NotificationType =
   | 'NEGOTIATION_INVITE'
   | 'WATCHED_NEW_BID'
   | 'WATCHED_STARTED'
-  | 'WITHDRAWN'
   | 'NO_BID_ALERT'
   | 'ENDING_BELOW_RESERVE'
   | 'AUCTION_CLOSED'
@@ -138,6 +142,5 @@ export type EngineData = {
   vehicles: Vehicle[]
   auctions: Auction[]
   bids: Bid[]
-  proxies: ProxyBid[]
   watches: Watch[]
 }

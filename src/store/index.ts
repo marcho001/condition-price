@@ -7,17 +7,17 @@ import {
   acceptNegotiation,
   adjustReserve,
   declineNegotiation,
-  withdrawAuction,
+  setDisposition,
   type ActionResult,
 } from '@/engine/actions'
 import { advanceAuctions } from '@/engine/advance'
 import { placeBid } from '@/engine/bid'
 import type { EngineEvent } from '@/engine/events'
 import { eventsToNotifications } from '@/engine/notify'
-import { resolveProxyBids } from '@/engine/proxy'
 import { NEGOTIATION_WINDOW_MS, highestBid } from '@/engine/rules'
-import { formatJPY, nextValidBid } from '@/lib/money'
-import type { AppNotification, Auction, EngineData, ProxyBid, Vehicle } from '@/types'
+import type { AppNotification, Auction, Disposition, EngineData, Vehicle } from '@/types'
+
+export const STORAGE_KEY = 'auction-demo:store:v2'
 
 export type ActionOutcome = { ok: true } | { ok: false; error: string }
 
@@ -41,17 +41,10 @@ type StoreState = EngineData & {
     amount: number
     now: number
   }) => ActionOutcome
-  setProxyBid: (args: {
-    auctionId: string
-    dealerId: string
-    maxAmount: number
-    now: number
-  }) => ActionOutcome
-  cancelProxyBid: (args: { auctionId: string; dealerId: string }) => void
   toggleWatch: (args: { auctionId: string; dealerId: string }) => void
   saveVehicle: (vehicle: Vehicle) => void
   saveAuction: (auction: Auction) => ActionOutcome
-  withdraw: (args: { auctionId: string; reason: string; byUserId: string }) => ActionOutcome
+  disposeVehicle: (args: { vehicleId: string; disposition: Disposition }) => ActionOutcome
   acceptNegotiationAs: (args: {
     auctionId: string
     dealerId: string
@@ -85,7 +78,6 @@ function dataOf(s: StoreState): EngineData {
     vehicles: s.vehicles,
     auctions: s.auctions,
     bids: s.bids,
-    proxies: s.proxies,
     watches: s.watches,
   }
 }
@@ -146,7 +138,7 @@ export const useStore = create<StoreState>()(
 
         advance: (now) => {
           const gen = idGen()
-          const r = advanceAuctions(dataOf(get()), now, gen.next)
+          const r = advanceAuctions(dataOf(get()), now)
           if (!r.changed) return
           commit(r.data, r.events, now, gen)
         },
@@ -158,64 +150,6 @@ export const useStore = create<StoreState>()(
           commit(r.data, r.events, now, gen)
           return OK
         },
-
-        setProxyBid: ({ auctionId, dealerId, maxAmount, now }) => {
-          const s = get()
-          const auction = s.auctions.find((a) => a.id === auctionId)
-          if (!auction) return fail('找不到這筆拍賣')
-          if (auction.status !== '進行中') return fail('只有進行中的拍賣可以設定代理出價')
-          if (auction.type === 'SEALED') return fail('密封投標不支援代理出價')
-
-          const current = highestBid(s.bids.filter((b) => b.auctionId === auctionId))?.amount ?? null
-          const min = nextValidBid(auction, current)
-          if (maxAmount < min) return fail(`代理上限至少需為 ${formatJPY(min)}`)
-
-          const gen = idGen()
-          const proxy: ProxyBid = { auctionId, dealerId, maxAmount, active: true, createdAt: now }
-          // 同一車商重設代理時覆蓋舊的，而非新增一筆
-          const proxies = [
-            ...s.proxies.filter((p) => !(p.auctionId === auctionId && p.dealerId === dealerId)),
-            proxy,
-          ]
-
-          const r = resolveProxyBids({
-            auction,
-            bids: s.bids.filter((b) => b.auctionId === auctionId),
-            proxies,
-            now,
-            nextId: gen.next,
-          })
-
-          const events: EngineEvent[] = []
-          let nextProxies = proxies
-          for (const b of r.newBids) {
-            events.push({ type: 'NEW_BID', auctionId, dealerId: b.dealerId, amount: b.amount })
-          }
-          for (const id of r.outbidDealerIds) {
-            events.push({ type: 'OUTBID', auctionId, dealerId: id, reason: 'outbid' })
-          }
-          for (const id of r.exhaustedDealerIds) {
-            events.push({ type: 'OUTBID', auctionId, dealerId: id, reason: 'proxy_exhausted' })
-            nextProxies = nextProxies.map((p) =>
-              p.auctionId === auctionId && p.dealerId === id ? { ...p, active: false } : p,
-            )
-          }
-
-          commit(
-            { ...dataOf(s), proxies: nextProxies, bids: [...s.bids, ...r.newBids] },
-            events,
-            now,
-            gen,
-          )
-          return OK
-        },
-
-        cancelProxyBid: ({ auctionId, dealerId }) =>
-          set((s) => ({
-            proxies: s.proxies.filter(
-              (p) => !(p.auctionId === auctionId && p.dealerId === dealerId),
-            ),
-          })),
 
         toggleWatch: ({ auctionId, dealerId }) =>
           set((s) => {
@@ -248,20 +182,29 @@ export const useStore = create<StoreState>()(
             return fail('立即成交價必須高於底價')
           }
 
+          const isRelist = !existing && auction.relistedFromId !== undefined
+
           set((st) => ({
             auctions: existing
               ? st.auctions.map((a) => (a.id === auction.id ? auction : a))
               : [...st.auctions, auction],
-            vehicles: st.vehicles.map((v) =>
-              v.id === auction.vehicleId && v.status === '在庫' ? { ...v, status: '已排拍' } : v,
-            ),
+            vehicles: st.vehicles.map((v) => {
+              if (v.id !== auction.vehicleId) return v
+              const next: Vehicle = v.status === '在庫' ? { ...v, status: '已排拍' } : { ...v }
+              // 重掛的車不再帶著前一輪的處置標記
+              if (isRelist) {
+                next.relistCount = v.relistCount + 1
+                next.disposition = undefined
+              }
+              return next
+            }),
           }))
           return OK
         },
 
-        withdraw: (args) => {
+        disposeVehicle: (args) => {
           const gen = idGen()
-          return runAction(withdrawAuction(dataOf(get()), args), Date.now(), gen)
+          return runAction(setDisposition(dataOf(get()), args), Date.now(), gen)
         },
 
         acceptNegotiationAs: (args) => {
@@ -320,18 +263,14 @@ export const useStore = create<StoreState>()(
               startAt: now,
               endAt: Math.max(auction.endAt, now + 600_000),
             }
-            const r = advanceAuctions(replaceAuction(s, shifted), now, gen.next)
+            const r = advanceAuctions(replaceAuction(s, shifted), now)
             commit(r.data, r.events, now, gen)
             return OK
           }
 
           if (to === 'close') {
             if (auction.status !== '進行中') return fail('只有進行中的拍賣可以強制結標')
-            const r = advanceAuctions(
-              replaceAuction(s, { ...auction, endAt: now }),
-              now,
-              gen.next,
-            )
+            const r = advanceAuctions(replaceAuction(s, { ...auction, endAt: now }), now)
             commit(r.data, r.events, now, gen)
             return OK
           }
@@ -406,13 +345,14 @@ export const useStore = create<StoreState>()(
       }
     },
     {
-      name: 'auction-demo:store',
-      version: 1,
+      // 資料形狀隨 Phase 1 對齊改過（移除代理出價、撤標、即時同步拍），
+      // 直接換 key 讓舊的 localStorage 失效，比寫 migration 乾淨
+      name: STORAGE_KEY,
+      version: 2,
       partialize: (s) => ({
         vehicles: s.vehicles,
         auctions: s.auctions,
         bids: s.bids,
-        proxies: s.proxies,
         watches: s.watches,
         notifications: s.notifications,
         currentUserId: s.currentUserId,

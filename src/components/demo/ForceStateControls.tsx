@@ -5,7 +5,6 @@ import { useClock } from '@/clock/clockStore'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useStore } from '@/store/index'
-import { useCurrentUser } from '@/store/useCurrentUser'
 
 type Force = 'start' | 'close' | 'pass' | 'negotiate'
 
@@ -18,7 +17,6 @@ const ACTIONS: Array<{ label: string; to: Force }> = [
 
 export function ForceStateControls() {
   const store = useStore()
-  const user = useCurrentUser()
   const { id: routeAuctionId } = useParams()
 
   const targets = store.auctions.filter(
@@ -86,22 +84,9 @@ export function ForceStateControls() {
         ))}
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="mt-1.5 w-full text-rose-700 hover:bg-rose-50"
-        onClick={() => {
-          const r = store.withdraw({
-            auctionId: effectiveId,
-            reason: 'Demo 控制台觸發',
-            byUserId: user?.id ?? 'u-staff',
-          })
-          if (r.ok) toast.success('已撤標')
-          else toast.error(r.error)
-        }}
-      >
-        強制撤標
-      </Button>
+      <p className="mt-1.5 text-xs text-slate-500">
+        Phase 1 不做撤標——上架前就要確認車輛可以處分。
+      </p>
     </section>
   )
 }

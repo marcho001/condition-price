@@ -15,9 +15,8 @@ import { filterAuctions, isWatched } from '@/store/selectors'
 import { useCurrentUser } from '@/store/useCurrentUser'
 import type { AuctionStatus, AuctionType } from '@/types'
 
-/** 車商看不到撤標原因，但仍需知道那台車已下架 */
-const STATUSES: AuctionStatus[] = ['未開始', '進行中', '議價中', '已流標', '已成交', '已撤標']
-const TYPES: AuctionType[] = ['SCHEDULED', 'LIVE', 'SEALED']
+const STATUSES: AuctionStatus[] = ['未開始', '進行中', '議價中', '已流標', '已成交']
+const TYPES: AuctionType[] = ['SCHEDULED', 'SEALED']
 
 type Query = {
   brands: string[]

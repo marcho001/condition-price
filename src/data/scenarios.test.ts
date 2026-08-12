@@ -13,22 +13,20 @@ const VEHICLE_STATUS_FOR: Record<AuctionStatus, string> = {
   議價中: '拍賣中',
   已成交: '已售出',
   已流標: '在庫',
-  已撤標: '已下架',
 }
 
 const find = (key: string) => SCENARIOS.find((s) => s.key === key)!
 
 describe('每個情境的基本健全性', () => {
-  it('共有 6 個情境，key 不重複', () => {
-    expect(SCENARIOS).toHaveLength(6)
-    expect(new Set(SCENARIOS.map((s) => s.key)).size).toBe(6)
+  it('共有 7 個情境，key 不重複', () => {
+    expect(SCENARIOS).toHaveLength(7)
+    expect(new Set(SCENARIOS.map((s) => s.key)).size).toBe(7)
   })
 
   for (const scenario of SCENARIOS) {
     it(`「${scenario.label}」載入後立刻跑引擎不會噴事件`, () => {
       const { data } = scenario.build(NOW)
-      let n = 0
-      const r = advanceAuctions(data, NOW, () => `x${++n}`)
+      const r = advanceAuctions(data, NOW)
       expect(r.events).toEqual([])
     })
 
@@ -110,14 +108,6 @@ describe('各情境的關鍵條件', () => {
     expect(bids.some((b) => b.dealerId === DEALER_A_ID)).toBe(false)
   })
 
-  it('proxy-war：兩筆代理、有代理出價、價格已被推高', () => {
-    const { data } = find('proxy-war').build(NOW)
-    const a = data.auctions.find((x) => x.id === 'a-run-normal')!
-
-    expect(data.proxies.filter((p) => p.auctionId === a.id)).toHaveLength(2)
-    expect(data.bids.some((b) => b.auctionId === a.id && b.kind === 'proxy')).toBe(true)
-    expect(currentPrice(data, a.id)!).toBeGreaterThan(a.startPrice)
-  })
 })
 
 describe('情境的決定性', () => {

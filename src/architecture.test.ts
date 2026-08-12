@@ -24,7 +24,7 @@ const readCode = (f: string) =>
     .replace(/(^|[^:])\/\/.*$/gm, '$1')
 
 /**
- * 底價、貸款餘額、代理上限是三項機密資料。
+ * 底價與貸款餘額是 Phase 1 §1.3 的兩項機密資料。
  * 這組測試在原始碼層面把它們鎖在公司人員端，避免日後改版時不小心洩漏。
  */
 describe('底價與機密資料的隔離', () => {
@@ -57,10 +57,6 @@ describe('底價與機密資料的隔離', () => {
     }
   })
 
-  it('出價紀錄不得顯示代理出價上限', () => {
-    expect(readCode(join(SRC, 'components', 'auction', 'BidHistory.tsx'))).not.toContain('maxAmount')
-  })
-
   it('底價提示只在 viewer 為 staff 時渲染', () => {
     const src = read(join(SRC, 'components', 'auction', 'AuctionCard.tsx'))
     const line = src.split('\n').find((l) => l.includes('<ReserveHint'))
@@ -71,11 +67,18 @@ describe('底價與機密資料的隔離', () => {
     expect(before).toContain("viewer.kind === 'staff'")
   })
 
-  it('代理出價上限只在車商自己的面板出現', () => {
-    const usingMaxAmount = filesUnder(join(SRC, 'components'))
-      .filter((f) => readCode(f).includes('maxAmount'))
+  it('Phase 1 不做代理出價，程式碼裡不該再有殘留', () => {
+    const offenders = filesUnder(SRC)
+      .filter((f) => /maxAmount|ProxyBid|resolveProxyBids/.test(readCode(f)))
       .map(rel)
-    expect(usingMaxAmount).toEqual(['components/auction/ProxyBidPanel.tsx'])
+    expect(offenders).toEqual([])
+  })
+
+  it('Phase 1 不做撤標，程式碼裡不該再有殘留', () => {
+    const offenders = filesUnder(SRC)
+      .filter((f) => /withdrawAuction|withdrawReason|已撤標/.test(readCode(f)))
+      .map(rel)
+    expect(offenders).toEqual([])
   })
 })
 
