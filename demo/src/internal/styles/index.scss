@@ -1,0 +1,220 @@
+/* xstar-web-pc の版型慣例に合わせたグローバルスタイル */
+:root {
+  --brand-sidebar: #2c2c37;
+  --brand-primary: #0568ff;
+  --page-bg: #f7f8fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--page-bg);
+  font-size: 14px;
+  color: #222;
+  font-family: 'PingFang SC', 'Hiragino Sans', 'Microsoft YaHei', 'Noto Sans JP', system-ui,
+    sans-serif;
+}
+
+/* ── 版型 ─────────────────────────────── */
+.page-wrap {
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+  padding: 16px 20px;
+  background: var(--page-bg);
+}
+
+.tab-filter-section {
+  padding: 5px 16px 0 16px;
+  margin-bottom: 20px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.table-section {
+  padding: 16px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+
+.card-title {
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.section-hint {
+  font-size: 13px;
+  line-height: 20px;
+  color: #909399;
+  margin-bottom: 12px;
+}
+
+.flex-space-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+
+.text-muted { color: #999; }
+.text-danger { color: #f56c6c; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* ── Element Plus 微調（既存 portal 準拠）───── */
+.el-pagination {
+  margin-top: 36px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.el-pagination.is-background .btn-next,
+.el-pagination.is-background .btn-prev,
+.el-pagination.is-background .el-pager li {
+  border: 1px solid #e6e6e6;
+  color: #999 !important;
+  border-radius: 8px;
+  background-color: #fff !important;
+
+  &:hover {
+    border-color: var(--el-color-primary);
+    color: var(--el-color-primary) !important;
+  }
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+  border: 1px solid var(--el-color-primary);
+  color: var(--el-color-primary) !important;
+  border-radius: 8px;
+  background-color: #fff !important;
+}
+
+.no-border .el-tabs__nav-wrap::after {
+  height: 0;
+}
+
+.el-table {
+  .el-table__header thead tr {
+    .cell {
+      font-size: 14px;
+      color: #222;
+      font-weight: 400;
+    }
+    th {
+      &:first-child { border-radius: 8px 0 0 8px; }
+      &:last-child { border-radius: 0 8px 8px 0; }
+    }
+    .el-table__cell {
+      background: #f8f8f8;
+    }
+  }
+  .el-table__row .el-table__cell {
+    .cell { word-break: break-all; }
+    &:first-child { border-radius: 8px 0 0 8px; }
+    &:last-child { border-radius: 0 8px 8px 0; }
+  }
+}
+
+.el-table td.el-table__cell,
+.el-table th.el-table__cell.is-leaf {
+  border-bottom: 1px solid rgba(0, 0, 0, 0) !important;
+}
+
+.el-dialog {
+  border-radius: 16px;
+}
+
+.el-dialog__body {
+  padding-top: 8px;
+}
+
+.el-message-box {
+  border-radius: 14px;
+}
+
+/* ── xInfoCard 風の label / value グリッド ───── */
+.info-section {
+  background: #fff;
+  border-radius: 16px;
+  padding: 16px;
+  margin-top: 16px;
+
+  &:first-child { margin-top: 0; }
+
+  .info-title {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px 32px;
+
+  @media screen and (max-width: 1180px) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+
+  &.is-full { grid-column: 1 / -1; }
+
+  .u-value {
+    font-size: 14px;
+    line-height: 22px;
+    min-height: 22px;
+    color: #222;
+    word-break: break-word;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .u-label {
+    font-size: 14px;
+    line-height: 22px;
+    color: #999;
+  }
+
+  .edit-pen {
+    cursor: pointer;
+    color: #c0c4cc;
+    font-size: 14px;
+    flex: none;
+
+    &:hover { color: var(--el-color-primary); }
+  }
+}
+
+.dialog-body-bg {
+  background: var(--page-bg);
+  padding: 16px 20px;
+  max-height: 68vh;
+  overflow: auto;
+  border-radius: 0 0 16px 16px;
+}

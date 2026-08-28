@@ -1,0 +1,170 @@
+{
+  "brand": {
+    "name": "XSTAR",
+    "sub": "AUCTION"
+  },
+  "nav": {
+    "list": "出品一覧",
+    "mybids": "入札中",
+    "won": "落札済み",
+    "notices": "お知らせ"
+  },
+  "common": {
+    "back": "戻る",
+    "close": "閉じる",
+    "cancel": "キャンセル",
+    "none": "—",
+    "unit": "件",
+    "yen": "円",
+    "apply": "適用する",
+    "clear": "条件をクリア"
+  },
+  "login": {
+    "title": "入札サイトにログイン",
+    "sub": "ご登録の Email とパスワードでログインしてください。アカウントは弊社にて発行します。",
+    "email": "Email（ログイン ID）",
+    "password": "パスワード",
+    "submit": "ログイン",
+    "forgot": "パスワードをお忘れの方",
+    "error": "Email またはパスワードが正しくありません。",
+    "disabled": "このアカウントは現在ご利用いただけません。担当者までご連絡ください。",
+    "demoTitle": "デモ用アカウント",
+    "demoHint": "タップすると入力欄に自動で入ります（パスワードは全て demo1234）。"
+  },
+  "forgot": {
+    "title": "パスワードの再設定",
+    "desc": "ご登録の Email 宛に、パスワード再設定のリンクをお送りします。",
+    "email": "Email",
+    "submit": "再設定メールを送る",
+    "sent": "{email} 宛に再設定メールを送信しました。メールのリンクから新しいパスワードを設定してください。",
+    "back": "ログイン画面に戻る"
+  },
+  "list": {
+    "title": "出品一覧",
+    "count": "{n} 台",
+    "sortNote": "締切が近い順",
+    "filter": "絞り込み",
+    "filterTitle": "出品を絞り込む",
+    "maker": "メーカー・車種",
+    "makerPh": "例：トヨタ／アルファード",
+    "year": "年式",
+    "mileage": "走行距離",
+    "color": "ボディカラー",
+    "bidState": "入札状況",
+    "all": "すべて",
+    "notBid": "未入札",
+    "bidded": "入札済み",
+    "mileageAny": "指定なし",
+    "mileageUnder3": "3 万 km 未満",
+    "mileage3to6": "3 〜 6 万 km",
+    "mileage6to10": "6 〜 10 万 km",
+    "mileageOver10": "10 万 km 以上",
+    "empty": "入札できる出品はありません",
+    "emptyDesc": "新しい出品が登録されると、Email・SMS とこのサイトのお知らせでご連絡します。",
+    "loadMore": "さらに読み込む"
+  },
+  "card": {
+    "deadline": "締切まで",
+    "closed": "締切",
+    "startPrice": "開始価格",
+    "myBid": "あなたの入札",
+    "notBidYet": "未入札",
+    "extraRound": "追加ラウンド",
+    "roundN": "第 {n} ラウンド"
+  },
+  "detail": {
+    "photos": "写真・シート",
+    "spec": "車両情報",
+    "remark": "備考",
+    "attachments": "添付ファイル",
+    "auctionInfo": "オークション情報",
+    "round": "ラウンド",
+    "period": "期間",
+    "deadline": "締切",
+    "deadlineIn": "締切まで",
+    "startPrice": "開始価格",
+    "myBid": "あなたの入札",
+    "bidAt": "入札日時",
+    "bid": "入札する",
+    "editBid": "入札を変更する",
+    "closedNote": "このラウンドは締め切りました。",
+    "extraNote": "追加ラウンドです。開始価格（前ラウンドの最高応札額）を上回る金額でご入札ください。",
+    "photoCount": "{i} / {n}",
+    "backToList": "一覧に戻る",
+    "closedBtn": "締め切りました"
+  },
+  "bid": {
+    "title": "入札金額の入力",
+    "editTitle": "入札金額の変更",
+    "amount": "入札金額（円）",
+    "placeholder": "0",
+    "floorFirst": "開始価格 0 円。1 円以上でご入札ください。",
+    "floorExtra": "開始価格 {price}。これを上回る金額でご入札ください。",
+    "current": "現在の入札：{amount}",
+    "quick": "クイック加算",
+    "next": "確認へ進む",
+    "confirmTitle": "この金額で入札します",
+    "confirmHint": "締切前であれば何度でも変更できます。最後に送信した金額が有効な入札になります。",
+    "backEdit": "金額を修正",
+    "submit": "この金額で入札する",
+    "success": "入札を受け付けました。",
+    "updated": "入札金額を変更しました。",
+    "errRequired": "金額を入力してください。",
+    "errFloor": "開始価格を上回る金額を入力してください。",
+    "errZero": "1 円以上の金額を入力してください。",
+    "errClosed": "締切を過ぎているため入札できません。",
+    "errNotEligible": "このオークションに入札する資格がありません。"
+  },
+  "mybids": {
+    "title": "入札中",
+    "empty": "入札中の車両はありません",
+    "emptyDesc": "出品一覧から入札すると、ここに表示されます。ラウンドが締め切られると一覧から外れます。"
+  },
+  "won": {
+    "title": "落札済み",
+    "seal": "落札",
+    "amount": "落札金額",
+    "wonAt": "落札日",
+    "empty": "落札した車両はありません",
+    "emptyDesc": "落札されるとお知らせと Email でご連絡し、ここに表示されます。",
+    "flowNote": "お支払い・名義変更は担当者より個別にご連絡します。手続き完了後、この一覧から外れます。"
+  },
+  "notices": {
+    "title": "お知らせ",
+    "empty": "お知らせはありません",
+    "emptyDesc": "新しい出品、追加ラウンドの招待、締切のご案内、入札結果をここでお知らせします。",
+    "unread": "未読",
+    "openAuction": "この出品を見る",
+    "NEW_AUCTION": {
+      "title": "新しい出品：{car}",
+      "body": "{car}（{order}）の入札を開始しました。締切は {end} です。開始価格は 0 円です。"
+    },
+    "EXTRA_ROUND_INVITE": {
+      "title": "追加ラウンドのご案内：{car}",
+      "body": "{car}（{order}）の第 {round} ラウンドにご招待します。開始価格は {price}、締切は {end} です。開始価格を上回る金額でご入札ください。"
+    },
+    "CLOSING_SOON": {
+      "title": "まもなく締切：{car}",
+      "body": "{car}（{order}）は {end} に締め切ります。まだご入札をいただいておりません。"
+    },
+    "WON": {
+      "title": "落札のお知らせ：{car}",
+      "body": "{order} を {amount} で落札されました。お支払い・名義変更は担当者よりご連絡します。"
+    },
+    "LOST": {
+      "title": "入札結果のお知らせ：{car}",
+      "body": "{order} 申し訳ございません、今回は落札に至りませんでした。またのご入札をお待ちしております。"
+    }
+  },
+  "demo": {
+    "title": "デモ操作",
+    "time": "サーバー時間",
+    "shift1h": "+1 時間",
+    "shift6h": "+6 時間",
+    "shift1d": "+1 日",
+    "resetTime": "現在時刻に戻す",
+    "logout": "ログアウト",
+    "openInternal": "内部システムを開く",
+    "switch": "販売店を切り替える"
+  }
+}
