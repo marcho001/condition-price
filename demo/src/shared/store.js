@@ -1,4 +1,5 @@
 import { reactive, ref, computed, watch } from 'vue'
+import dayjs from 'dayjs'
 import { buildSeed } from './seed.js'
 
 const KEY = 'jp-auction-demo/v1'
@@ -10,13 +11,16 @@ function load() {
     if (!raw) return null
     const parsed = JSON.parse(raw)
     if (!parsed || parsed.version !== 1) return null
+    // seed 的日期都是相對今天算的，跨日後重建，避免截止時間變成過去
+    if (!dayjs(parsed.seededAt).isSame(dayjs(), 'day')) return null
     return parsed
   } catch {
     return null
   }
 }
 
-export const db = reactive(load() || buildSeed())
+const restored = load()
+export const db = reactive(restored || buildSeed())
 
 let muted = false
 let bc = null
@@ -33,6 +37,9 @@ function persist() {
     console.warn('[demo] localStorage 保存に失敗しました（容量超過の可能性）', e)
   }
 }
+
+// 跨日重建時先落地一次，避免 localStorage 還留著昨天的資料
+if (!restored) persist()
 
 watch(
   db,
