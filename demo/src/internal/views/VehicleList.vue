@@ -14,25 +14,6 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item :label="t('vehicle.makeSeries')">
-              <el-input v-model="filter.makeSeries" clearable @keyup.enter="apply" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item :label="t('vehicle.carYear')">
-              <el-select v-model="filter.carYear" clearable>
-                <el-option v-for="y in yearOptions" :key="y" :label="y" :value="y" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item :label="t('vehicle.color')">
-              <el-select v-model="filter.color" clearable>
-                <el-option v-for="c in COLORS_JA" :key="c" :label="c" :value="c" />
-              </el-select>
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
             <el-form-item :label="t('vehicle.receivedAt')">
               <el-date-picker
                 v-model="filter.receivedAt"
@@ -41,13 +22,6 @@
                 range-separator="~"
                 style="width: 100%"
               />
-            </el-form-item>
-          </el-col>
-          <el-col :span="6">
-            <el-form-item :label="t('vehicle.status')">
-              <el-select v-model="filter.status" clearable>
-                <el-option :label="t('vehicle.statusPending')" value="PENDING_SCHEDULE" />
-              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="6">
@@ -90,11 +64,6 @@
         <el-table-column :label="t('vehicle.receivedAt')" width="120">
           <template #default="{ row }"><span class="num">{{ fmtDate(row.receivedAt) }}</span></template>
         </el-table-column>
-        <el-table-column :label="t('vehicle.status')" :width="locale === 'ja' ? 150 : 140">
-          <template #default>
-            <el-tag size="small" effect="plain">{{ t('vehicle.statusPending') }}</el-tag>
-          </template>
-        </el-table-column>
         <el-table-column
           :label="t('common.operation')"
           :width="locale === 'ja' ? 230 : 190"
@@ -102,7 +71,7 @@
         >
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row.id)">
-              {{ t('vehicle.actionDetail') }}
+              {{ t('vehicle.actionEdit') }}
             </el-button>
             <el-tooltip :content="t('vehicle.mileageRequired')" :disabled="canSchedule(row)" placement="top">
               <span>
@@ -140,7 +109,7 @@ import VehicleDetailDialog from '../components/VehicleDetailDialog.vue'
 import ScheduleDialog from '../components/ScheduleDialog.vue'
 import { db } from '@/shared/store.js'
 import { vehicleView, canSchedule } from '@/shared/engine.js'
-import { VEHICLE_STATUS, COLORS_JA } from '@/shared/constants.js'
+import { VEHICLE_STATUS } from '@/shared/constants.js'
 import { fmtDate } from '@/shared/format.js'
 
 const { t, locale } = useI18n()
@@ -148,11 +117,7 @@ const { t, locale } = useI18n()
 const blank = () => ({
   orderNo: '',
   plate: '',
-  makeSeries: '',
-  carYear: '',
-  color: '',
-  receivedAt: null,
-  status: ''
+  receivedAt: null
 })
 const filter = reactive(blank())
 const applied = ref(blank())
@@ -171,19 +136,11 @@ const rows = computed(() =>
     .sort((a, b) => dayjs(b.receivedAt).valueOf() - dayjs(a.receivedAt).valueOf())
 )
 
-const yearOptions = computed(() => [...new Set(rows.value.map((r) => r.view.carYear))].sort().reverse())
-
 const filtered = computed(() => {
   const f = applied.value
   return rows.value.filter((r) => {
     if (f.orderNo && !r.orderNo.toLowerCase().includes(f.orderNo.toLowerCase())) return false
     if (f.plate && !String(r.view.licensingPlateNumber).includes(f.plate)) return false
-    if (f.makeSeries) {
-      const s = `${r.view.makeName} ${r.view.seriesName} ${r.view.modelName}`.toLowerCase()
-      if (!s.includes(f.makeSeries.toLowerCase())) return false
-    }
-    if (f.carYear && r.view.carYear !== f.carYear) return false
-    if (f.color && r.view.color !== f.color) return false
     if (f.receivedAt?.length === 2) {
       const d = dayjs(r.receivedAt)
       if (d.isBefore(dayjs(f.receivedAt[0]), 'day') || d.isAfter(dayjs(f.receivedAt[1]), 'day')) return false

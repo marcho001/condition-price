@@ -48,6 +48,7 @@
     "receivedAt": "收車日",
     "status": "狀態",
     "statusPending": "待排定拍賣",
+    "actionEdit": "編輯",
     "actionDetail": "車輛詳細",
     "actionSchedule": "排定拍賣",
     "mileageRequired": "走行距離（實際里程）未填寫，無法排定拍賣",

@@ -52,6 +52,7 @@
     "receivedAt": "引取日",
     "status": "ステータス",
     "statusPending": "出品登録待ち",
+    "actionEdit": "編集",
     "actionDetail": "車両詳細",
     "actionSchedule": "オークション登録",
     "mileageRequired": "走行距離（実測値）が未入力のため登録できません",

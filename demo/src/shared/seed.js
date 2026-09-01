@@ -155,7 +155,7 @@ export function buildSeed() {
     // ── 待排定拍賣 ─────────────────────────────
     mk({
       id: 'V2601',
-      orderNo: 'ORD-20260712-0031',
+      orderNo: '20260712430',
       plate: '品川 300 あ 12-34',
       make: 'トヨタ',
       series: 'プリウス',
@@ -191,7 +191,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2602',
-      orderNo: 'ORD-20260714-0044',
+      orderNo: '20260714743',
       plate: '横浜 500 さ 56-78',
       make: 'ホンダ',
       series: 'フィット',
@@ -217,7 +217,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2603',
-      orderNo: 'ORD-20260716-0058',
+      orderNo: '20260716318',
       plate: '足立 300 な 90-12',
       make: '日産',
       series: 'セレナ',
@@ -243,7 +243,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2604',
-      orderNo: 'ORD-20260718-0063',
+      orderNo: '20260718205',
       plate: '大宮 300 ほ 34-56',
       make: 'マツダ',
       series: 'CX-5',
@@ -273,7 +273,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2605',
-      orderNo: 'ORD-20260720-0071',
+      orderNo: '20260720228',
       plate: '所沢 300 め 78-90',
       make: 'スバル',
       series: 'フォレスター',
@@ -301,7 +301,7 @@ export function buildSeed() {
     // ── 拍賣進行中 ─────────────────────────────
     mk({
       id: 'V2591',
-      orderNo: 'ORD-20260628-0012',
+      orderNo: '20260628706',
       plate: '練馬 300 ら 11-22',
       make: 'トヨタ',
       series: 'アルファード',
@@ -327,7 +327,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2592',
-      orderNo: 'ORD-20260630-0019',
+      orderNo: '20260630431',
       plate: '春日部 580 と 33-44',
       make: 'スズキ',
       series: 'ハスラー',
@@ -353,7 +353,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2593',
-      orderNo: 'ORD-20260620-0004',
+      orderNo: '20260620290',
       plate: '世田谷 300 は 55-66',
       make: 'レクサス',
       series: 'RX',
@@ -379,7 +379,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2594',
-      orderNo: 'ORD-20260702-0025',
+      orderNo: '20260702336',
       plate: '川口 580 ゆ 77-88',
       make: 'ダイハツ',
       series: 'タント',
@@ -407,7 +407,7 @@ export function buildSeed() {
     // ── 已結標 ─────────────────────────────────
     mk({
       id: 'V2585',
-      orderNo: 'ORD-20260610-0088',
+      orderNo: '20260610113',
       plate: '横浜 300 ま 99-00',
       make: 'トヨタ',
       series: 'ハリアー',
@@ -433,7 +433,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2586',
-      orderNo: 'ORD-20260612-0091',
+      orderNo: '20260612989',
       plate: '柏 300 き 21-43',
       make: 'ホンダ',
       series: 'ヴェゼル',
@@ -459,7 +459,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2587',
-      orderNo: 'ORD-20260614-0096',
+      orderNo: '20260614566',
       plate: '習志野 300 の 65-87',
       make: '三菱',
       series: 'デリカ D:5',
@@ -487,7 +487,7 @@ export function buildSeed() {
     // ── 已決標 ─────────────────────────────────
     mk({
       id: 'V2578',
-      orderNo: 'ORD-20260528-0055',
+      orderNo: '20260528182',
       plate: '八王子 500 ふ 10-08',
       make: '日産',
       series: 'ノート',
@@ -513,7 +513,7 @@ export function buildSeed() {
     }),
     mk({
       id: 'V2579',
-      orderNo: 'ORD-20260530-0061',
+      orderNo: '20260530494',
       plate: '千葉 500 む 32-10',
       make: 'トヨタ',
       series: 'ヤリス',
