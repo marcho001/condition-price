@@ -4,7 +4,8 @@
 
     <div class="head">
       <div>
-        <p v-if="round.round > 1" class="round-flag">{{ t('card.roundN', { n: round.round }) }}・{{ t('card.extraRound') }}</p>
+        <!-- 追加ラウンドのみ標記。第何ラウンドかは対外サイトでは表示しない -->
+        <p v-if="isExtraRound" class="round-flag">{{ t('card.extraRound') }}</p>
         <h1>{{ view.makeName }} {{ view.seriesName }}</h1>
         <p class="grade">{{ view.modelName }}</p>
       </div>
@@ -47,23 +48,25 @@
             <p class="note">{{ t('won.flowNote') }}</p>
           </div>
           <CountdownBoard v-else :round="round" size="lg" />
+          <p class="side-sec eyebrow">{{ t('detail.auctionInfo') }}</p>
           <dl class="side-spec">
             <div>
               <dt>{{ t('detail.round') }}</dt>
-              <dd>{{ t('card.roundN', { n: round.round }) }}</dd>
+              <dd>{{ isExtraRound ? t('detail.extraRound') : t('detail.firstRound') }}</dd>
             </div>
             <div>
               <dt>{{ t('detail.period') }}</dt>
               <dd class="fig">{{ fmtDate(round.startDate) }} 〜 {{ fmtDate(round.endDate) }}</dd>
             </div>
-            <div>
+            <!-- 第一輪は開始価格を提示しない -->
+            <div v-if="isExtraRound">
               <dt>{{ t('detail.startPrice') }}</dt>
               <dd class="fig strong">{{ yenJa(round.startPrice) }}</dd>
             </div>
           </dl>
 
           <p v-if="closed && !myAward" class="note closed-note">{{ t('detail.closedNote') }}</p>
-          <p v-else-if="round.round > 1 && !myAward" class="note">{{ t('detail.extraNote') }}</p>
+          <p v-else-if="isExtraRound && !myAward" class="note">{{ t('detail.extraNote') }}</p>
 
           <div v-if="!myAward" class="mybid" :class="{ on: myBid }">
             <span>{{ t('detail.myBid') }}</span>
@@ -84,8 +87,18 @@
     <!-- モバイルの固定入札バー -->
     <div v-if="!isDesktop && !myAward" class="sticky-bar">
       <div class="sb-info">
-        <span>{{ myBid ? t('detail.myBid') : t('detail.startPrice') }}</span>
-        <b class="fig">{{ myBid ? yenJa(myBid.amount) : yenJa(round.startPrice) }}</b>
+        <template v-if="myBid">
+          <span>{{ t('detail.myBid') }}</span>
+          <b class="fig">{{ yenJa(myBid.amount) }}</b>
+        </template>
+        <template v-else-if="isExtraRound">
+          <span>{{ t('detail.startPrice') }}</span>
+          <b class="fig">{{ yenJa(round.startPrice) }}</b>
+        </template>
+        <template v-else>
+          <span>{{ t('detail.myBid') }}</span>
+          <b class="none">{{ t('card.notBidYet') }}</b>
+        </template>
       </div>
       <button class="btn btn-primary" :disabled="closed" @click="bidOpen = true">
         {{ closed ? t('detail.closedBtn') : myBid ? t('detail.editBid') : t('detail.bid') }}
@@ -128,6 +141,7 @@ const vehicle = computed(() => (round.value ? vehicleById(round.value.vehicleId)
 const view = computed(() => vehicleView(vehicle.value))
 const myBid = computed(() => (round.value ? bidOf(round.value.id, db.dealerSession) : null))
 const closed = computed(() => !round.value || roundRemaining(round.value) <= 0)
+const isExtraRound = computed(() => !!round.value && round.value.round > 1)
 // 自分が落札した車両では入札 UI を出さず、成約金額を表示する
 const myAward = computed(() => {
   const a = vehicle.value ? awardOf(vehicle.value.id) : null
@@ -203,7 +217,8 @@ h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.01em; line-
 .side-card { padding: 14px; position: static; }
 @media (min-width: 980px) { .side-card { position: sticky; top: 82px; } }
 
-.side-spec { margin: 14px 0 0; }
+.side-sec { margin: 16px 0 2px; }
+.side-spec { margin: 6px 0 0; }
 .side-spec > div {
   display: flex;
   align-items: baseline;
@@ -281,5 +296,6 @@ h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.01em; line-
 .sb-info { display: flex; flex-direction: column; line-height: 1.3; }
 .sb-info span { font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.08em; }
 .sb-info b { font-size: 17px; font-weight: 600; }
+.sb-info b.none { font-size: 14px; font-weight: 500; color: var(--ink-3); }
 .sticky-bar .btn { flex: 1; }
 </style>

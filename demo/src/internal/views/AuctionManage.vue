@@ -15,25 +15,22 @@
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item :label="t('vehicle.makeSeries')">
-              <el-input v-model="filter.makeSeries" clearable @keyup.enter="apply" />
+            <el-form-item :label="t('vehicle.plate')">
+              <el-input v-model="filter.plate" clearable @keyup.enter="apply" />
             </el-form-item>
           </el-col>
           <el-col :span="6">
-            <el-form-item :label="t('auction.round')">
-              <el-select v-model="filter.round" clearable>
-                <el-option
-                  v-for="n in roundOptions"
-                  :key="n"
-                  :label="t('auction.roundN', { n })"
-                  :value="n"
-                />
+            <el-form-item :label="t('auction.roundType')">
+              <!-- 固定兩個選項，不取自當前資料；不提供依輪次序號篩選 -->
+              <el-select v-model="filter.roundType" clearable>
+                <el-option :label="t('auction.firstRound')" :value="ROUND_TYPE.FIRST" />
+                <el-option :label="t('auction.extraRound')" :value="ROUND_TYPE.EXTRA" />
               </el-select>
             </el-form-item>
           </el-col>
           <el-col v-if="tab === 'awarded'" :span="6">
             <el-form-item :label="t('auction.awardedDealer')">
-              <el-select v-model="filter.dealerId" clearable>
+              <el-select v-model="filter.dealerIds" multiple collapse-tags clearable>
                 <el-option v-for="d in db.dealers" :key="d.id" :label="d.name" :value="d.id" />
               </el-select>
             </el-form-item>
@@ -82,19 +79,18 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column :label="t('auction.round')" width="130">
+        <el-table-column :label="t('auction.roundType')" width="130">
           <template #default="{ row }">
-            {{ t('auction.roundN', { n: row.round.round }) }}
-            <el-tag v-if="row.round.round > 1" type="warning" size="small">{{ t('auction.extraRound') }}</el-tag>
+            <!-- 只顯示「首輪」或「加價輪」，不顯示第幾輪（序號見車輛詳細彈窗） -->
+            <el-tag :type="row.round.round > 1 ? 'warning' : 'info'" size="small" effect="plain">
+              {{ roundTypeLabel(row.round) }}
+            </el-tag>
           </template>
         </el-table-column>
         <el-table-column :label="t('auction.period')" width="215" class-name="nowrap-cell">
           <template #default="{ row }">
             <span class="num">{{ fmtDate(row.round.startDate) }} 〜 {{ fmtDate(row.round.endDate) }}</span>
           </template>
-        </el-table-column>
-        <el-table-column :label="t('auction.remaining')" width="150">
-          <template #default="{ row }"><Countdown :round="row.round" /></template>
         </el-table-column>
         <el-table-column :label="t('auction.bidderCount')" width="120" align="center">
           <template #default="{ row }">
@@ -131,8 +127,12 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column :label="t('auction.round')" width="120">
-          <template #default="{ row }">{{ t('auction.roundN', { n: row.round.round }) }}</template>
+        <el-table-column :label="t('auction.roundType')" width="130">
+          <template #default="{ row }">
+            <el-tag :type="row.round.round > 1 ? 'warning' : 'info'" size="small" effect="plain">
+              {{ roundTypeLabel(row.round) }}
+            </el-tag>
+          </template>
         </el-table-column>
         <el-table-column :label="t('auction.period')" width="215" class-name="nowrap-cell">
           <template #default="{ row }">
@@ -168,44 +168,50 @@
             </el-link>
           </template>
         </el-table-column>
-        <el-table-column :label="t('auction.vehicleInfo')" min-width="230">
+        <el-table-column :label="t('auction.vehicleInfo')" min-width="190">
           <template #default="{ row }">
             <div>{{ row.view.makeName }} {{ row.view.seriesName }}</div>
             <div class="text-muted sub num">{{ row.view.licensingPlateNumber }}・{{ row.view.carYear }}</div>
           </template>
         </el-table-column>
-        <el-table-column :label="t('auction.awardedDealer')" min-width="170">
+        <el-table-column :label="t('auction.awardedDealer')" min-width="160">
           <template #default="{ row }">{{ dealerById(row.award.dealerId)?.name }}</template>
         </el-table-column>
-        <el-table-column :label="t('auction.awardedAmount')" width="160" align="right">
+        <el-table-column :label="t('auction.awardedAmount')" width="150" align="right">
           <template #default="{ row }"><b class="num">{{ yenJa(row.award.amount) }}</b></template>
         </el-table-column>
-        <el-table-column :label="t('auction.awardedRound')" width="110">
-          <template #default="{ row }">{{ t('auction.roundN', { n: row.round?.round }) }}</template>
+        <el-table-column :label="t('auction.awardedRoundType')" width="120">
+          <template #default="{ row }">
+            <!-- 在哪一種輪次成交；決標於第幾輪在「詳細」彈窗呈現 -->
+            <el-tag :type="row.round?.round > 1 ? 'warning' : 'info'" size="small" effect="plain">
+              {{ roundTypeLabel(row.round) }}
+            </el-tag>
+          </template>
         </el-table-column>
-        <el-table-column :label="t('auction.awardedMethod')" width="140">
+        <el-table-column :label="t('auction.awardedMethod')" width="130">
           <template #default="{ row }">
             <el-tag :type="row.award.method === 'AWARD' ? 'success' : 'warning'" size="small" effect="plain">
               {{ row.award.method === 'AWARD' ? t('auction.methodAward') : t('auction.methodDesignate') }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column :label="t('auction.awardedAt')" width="200">
+        <el-table-column :label="t('auction.awardedAt')" width="185" class-name="nowrap-cell">
           <template #default="{ row }">
             <span class="num">{{ fmtDateTime(row.award.at) }}</span>
             <div class="text-muted sub">{{ row.award.operator }}</div>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" :width="locale === 'ja' ? 170 : 150" fixed="right">
+        <!-- 本 tab 不提供標記結案的按鈕 —— 結案由貸後呼叫[結清通知]觸發 -->
+        <el-table-column :label="t('common.operation')" width="120" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openAwarded(row.vehicle.id)">{{ t('common.detail') }}</el-button>
-            <el-button link type="primary" @click="doComplete(row.vehicle.id)">
-              {{ t('auction.actionComplete') }}
-            </el-button>
           </template>
         </el-table-column>
         <template #empty><el-empty :description="t('common.noData')" :image-size="80" /></template>
       </el-table>
+
+      <p v-if="tab === 'awarded'" class="section-hint tab-note">{{ t('auction.settledNote') }}</p>
+      <p v-else-if="tab === 'open'" class="section-hint tab-note">{{ t('auction.noRemaining') }}</p>
 
       <el-pagination
         v-model:current-page="page"
@@ -258,8 +264,7 @@
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import Countdown from '../components/Countdown.vue'
+import { ElMessage } from 'element-plus'
 import VehicleDetailDialog from '../components/VehicleDetailDialog.vue'
 import ClosedRoundDialog from '../components/ClosedRoundDialog.vue'
 import ExtraRoundDialog from '../components/ExtraRoundDialog.vue'
@@ -273,18 +278,21 @@ import {
   highestOfRound,
   dealerById,
   unbidInvitees,
-  sendUrge,
-  markCompleted
+  sendUrge
 } from '@/shared/engine.js'
-import { ROLE, VEHICLE_STATUS } from '@/shared/constants.js'
+import { ROLE, ROUND_TYPE, VEHICLE_STATUS, roundTypeOf } from '@/shared/constants.js'
 import { fmtDate, fmtDateTime, yenJa, km } from '@/shared/format.js'
 
 const { t, locale } = useI18n()
 
+// 列表與篩選一律只用「首輪／加價輪」兩個值
+const roundTypeLabel = (round) =>
+  roundTypeOf(round) === ROUND_TYPE.EXTRA ? t('auction.extraRound') : t('auction.firstRound')
+
 const canAwardRole = computed(() => db.internalUser.roles.includes(ROLE.AWARD))
 const tab = ref('open')
 
-const blank = () => ({ orderNo: '', makeSeries: '', round: '', period: null, dealerId: '' })
+const blank = () => ({ orderNo: '', plate: '', roundType: '', period: null, dealerIds: [] })
 const filter = reactive(blank())
 const applied = ref(blank())
 const page = ref(1)
@@ -329,7 +337,8 @@ const closedRows = computed(() =>
 
 const awardedRows = computed(() =>
   db.awards
-    .filter((a) => !a.completed)
+    // 已結清的訂單以軟刪除自本 tab 移除（不新增第四個 tab、不提供「已結清」篩選）
+    .filter((a) => !a.settled)
     .map((a) => ({ award: a, vehicle: vehicleById(a.vehicleId), round: roundById(a.roundId) }))
     .filter((x) => x.vehicle && x.vehicle.status === VEHICLE_STATUS.AWARDED)
     .map((x) => ({ ...x, view: vehicleView(x.vehicle) }))
@@ -340,18 +349,13 @@ const rows = computed(() =>
   tab.value === 'open' ? openRows.value : tab.value === 'closed' ? closedRows.value : awardedRows.value
 )
 
-const roundOptions = computed(() => [...new Set(rows.value.map((r) => r.round?.round))].filter(Boolean).sort())
-
 const filtered = computed(() => {
   const f = applied.value
   return rows.value.filter((r) => {
     if (f.orderNo && !r.vehicle.orderNo.toLowerCase().includes(f.orderNo.toLowerCase())) return false
-    if (f.makeSeries) {
-      const s = `${r.view.makeName} ${r.view.seriesName} ${r.view.modelName}`.toLowerCase()
-      if (!s.includes(f.makeSeries.toLowerCase())) return false
-    }
-    if (f.round && r.round?.round !== f.round) return false
-    if (f.dealerId && r.award?.dealerId !== f.dealerId) return false
+    if (f.plate && !String(r.view.licensingPlateNumber).includes(f.plate)) return false
+    if (f.roundType && roundTypeOf(r.round) !== f.roundType) return false
+    if (f.dealerIds?.length && !f.dealerIds.includes(r.award?.dealerId)) return false
     if (f.period?.length === 2 && r.round) {
       const s = dayjs(r.round.startDate)
       if (s.isBefore(dayjs(f.period[0]), 'day') || s.isAfter(dayjs(f.period[1]), 'day')) return false
@@ -407,15 +411,6 @@ function doUrge() {
   ElMessage.success(t('auction.urgeDone', { n: res.targets.length }))
   urgeOpen.value = false
 }
-async function doComplete(vehicleId) {
-  try {
-    await ElMessageBox.confirm(t('auction.completeConfirm'), t('auction.actionComplete'), { type: 'warning' })
-  } catch {
-    return
-  }
-  markCompleted(vehicleId, db.internalUser.name)
-  ElMessage.success(t('auction.completeDone'))
-}
 </script>
 
 <style lang="scss" scoped>
@@ -440,6 +435,7 @@ async function doComplete(vehicleId) {
   font-size: 12.5px;
 }
 .tie-tag { margin-left: 6px; }
+.tab-note { margin: 14px 0 0; }
 .urge-text { margin: 0 0 8px; font-size: 13.5px; }
 .urge-list {
   margin: 0 0 12px;

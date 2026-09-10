@@ -102,6 +102,8 @@ export function buildSeed() {
       email: 'yamada@example.co.jp',
       password: 'demo1234',
       status: 'ACTIVE',
+      locked: false,
+      loginFailCount: 0,
       remark: '関東エリア・年間 200 台規模',
       createdAt: ts(-180)
     },
@@ -113,6 +115,8 @@ export function buildSeed() {
       email: 'suzuki@example.co.jp',
       password: 'demo1234',
       status: 'ACTIVE',
+      locked: false,
+      loginFailCount: 0,
       remark: '',
       createdAt: ts(-180)
     },
@@ -124,6 +128,8 @@ export function buildSeed() {
       email: 'tanaka@example.co.jp',
       password: 'demo1234',
       status: 'ACTIVE',
+      locked: false,
+      loginFailCount: 0,
       remark: '軽自動車を中心に仕入',
       createdAt: ts(-150)
     },
@@ -135,6 +141,8 @@ export function buildSeed() {
       email: 'sato@example.co.jp',
       password: 'demo1234',
       status: 'ACTIVE',
+      locked: false,
+      loginFailCount: 0,
       remark: '',
       createdAt: ts(-90)
     },
@@ -146,8 +154,24 @@ export function buildSeed() {
       email: 'takahashi@example.co.jp',
       password: 'demo1234',
       status: 'INACTIVE',
+      locked: false,
+      loginFailCount: 0,
       remark: '取引一時停止中（ログイン不可）',
       createdAt: ts(-200)
+    },
+    {
+      id: 'DL06',
+      name: '伊藤モーターサービス',
+      contactName: '伊藤 大輔',
+      phone: '070-6789-0123',
+      email: 'ito@example.co.jp',
+      password: 'demo1234',
+      status: 'ACTIVE',
+      // ログイン 5 回失敗でシステムが自動ロック（内部の「ロック解除」でのみ復旧）
+      locked: true,
+      loginFailCount: 5,
+      remark: 'ログイン連続失敗によりロック中',
+      createdAt: ts(-120)
     }
   ]
 
@@ -724,6 +748,65 @@ export function buildSeed() {
     bid('R2579-1', 'DL03', 985000, ts(-15, 18, 12))
   ]
 
+  // 貸後端尚未呼叫[收車通知]的訂單。Demo 控制台可代替貸後團隊呼叫，
+  // 本模組依 orderNo 自行取進件車輛資料建檔（車輛資料不隨 payload 傳入）
+  const intakePool = [
+    {
+      orderNo: '20260726611',
+      vehicle: mk({
+        id: 'V2606',
+        orderNo: '20260726611',
+        plate: '千葉 300 ら 24-68',
+        make: 'トヨタ',
+        series: 'ヴォクシー',
+        yearName: 'ZWR90',
+        grade: 'S-Z',
+        carYear: '2022',
+        color: 'ブラック',
+        fuel: 'ハイブリッド',
+        disp: '1,797 cc',
+        mileageRange: '1万 〜 3万 km',
+        vin: 'ZWR90-0071233',
+        productDate: '2022-03-14',
+        registeDate: '2022-04',
+        inspect: '2028-04-13',
+        transfer: '0',
+        insurance: '2028-04-25',
+        guidePrice: '2,600,000 〜 3,050,000',
+        valuationPrice: '2,820,000',
+        current: {},
+        files: {}
+      })
+    },
+    {
+      orderNo: '20260728904',
+      vehicle: mk({
+        id: 'V2607',
+        orderNo: '20260728904',
+        plate: '名古屋 500 ゆ 13-57',
+        make: 'ホンダ',
+        series: 'N-BOX',
+        yearName: 'JF3',
+        grade: 'G・L ホンダセンシング',
+        carYear: '2020',
+        color: 'パールホワイト',
+        fuel: 'ガソリン',
+        disp: '658 cc',
+        mileageRange: '3万 〜 5万 km',
+        vin: 'JF3-1450922',
+        productDate: '2020-08-21',
+        registeDate: '2020-09',
+        inspect: '2026-09-20',
+        transfer: '1',
+        insurance: '2026-10-01',
+        guidePrice: '850,000 〜 1,080,000',
+        valuationPrice: '960,000',
+        current: {},
+        files: {}
+      })
+    }
+  ]
+
   const awards = [
     {
       vehicleId: 'V2578',
@@ -733,8 +816,8 @@ export function buildSeed() {
       method: AWARD_METHOD.AWARD,
       operator: '中村 誠',
       at: ts(-12, 10, 30),
-      completed: false,
-      completedAt: null
+      settled: false,
+      settledAt: null
     },
     {
       vehicleId: 'V2579',
@@ -744,8 +827,8 @@ export function buildSeed() {
       method: AWARD_METHOD.DESIGNATE,
       operator: '中村 誠',
       at: ts(-13, 14, 5),
-      completed: false,
-      completedAt: null
+      settled: false,
+      settledAt: null
     }
   ]
 
@@ -777,7 +860,7 @@ export function buildSeed() {
   ]
 
   return {
-    version: 1,
+    version: 2,
     seededAt: Date.now(),
     dealers,
     vehicles,
@@ -785,8 +868,15 @@ export function buildSeed() {
     bids,
     awards,
     notifications,
+    // 帳號通知（事件 6、7）—— 僅 Email，不進站內通知
+    emails: [],
+    // 與貸後的三支介接 API 的呼叫紀錄（收車通知／成交通知／結清通知）
+    callbackLogs: [],
+    intakePool,
     auditLogs: [],
     timeOffset: 0,
+    // Demo 用開關：開啟後成交通知呼叫失敗，可觀察「留在已結標」的行為
+    demo: { dealApiFail: false },
     internalUser: { name: '田中 健一', roles: ['auction:operation', 'auction:award'] },
     dealerSession: null
   }

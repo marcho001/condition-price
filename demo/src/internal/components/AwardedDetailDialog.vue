@@ -30,8 +30,9 @@
             <div class="u-label">{{ t('auction.awardedAmount') }}</div>
           </div>
           <div class="info-item">
-            <div class="u-value">{{ t('auction.roundN', { n: round?.round }) }}</div>
-            <div class="u-label">{{ t('auction.awardedRound') }}</div>
+            <!-- 決標於第幾輪在彈窗與稽核中呈現 -->
+            <div class="u-value">{{ round ? roundNType(round) : '—' }}</div>
+            <div class="u-label">{{ t('auction.round') }}</div>
           </div>
           <div class="info-item">
             <div class="u-value num">{{ fmtDateTime(award.at) }}／{{ award.operator }}</div>
@@ -46,7 +47,7 @@
           <el-collapse-item v-for="r in rounds" :key="r.id" :name="r.id">
             <template #title>
               <span class="num">
-                {{ t('auction.roundN', { n: r.round }) }}　{{ fmtDate(r.startDate) }} 〜 {{ fmtDate(r.endDate) }}
+                {{ roundNType(r) }}　{{ fmtDate(r.startDate) }} 〜 {{ fmtDate(r.endDate) }}
                 　{{ t('auction.startPrice') }} {{ yenJa(r.startPrice) }}
               </span>
             </template>
@@ -72,6 +73,8 @@
         </el-collapse>
       </div>
 
+      <p class="section-hint settled-note">{{ t('auction.settledNote') }}</p>
+
       <VehicleInfoGrid :vehicle="vehicle" :editable="false" :lock-reason="t('vehicle.lockedClosed')" />
       <AttachmentPanel :vehicle="vehicle" :editable="false" />
     </div>
@@ -96,6 +99,7 @@ import {
   rankingOfRound,
   dealerById
 } from '@/shared/engine.js'
+import { ROUND_TYPE, roundTypeOf } from '@/shared/constants.js'
 import { fmtDate, fmtDateTime, yenJa } from '@/shared/format.js'
 
 const props = defineProps({ modelValue: Boolean, vehicleId: String })
@@ -107,6 +111,12 @@ const view = computed(() => vehicleView(vehicle.value))
 const award = computed(() => (props.vehicleId ? awardOf(props.vehicleId) : null))
 const round = computed(() => (award.value ? roundById(award.value.roundId) : null))
 const rounds = computed(() => (props.vehicleId ? roundsOf(props.vehicleId) : []))
+
+const roundNType = (r) =>
+  t('auction.roundNType', {
+    n: r.round,
+    type: roundTypeOf(r) === ROUND_TYPE.EXTRA ? t('auction.extraRound') : t('auction.firstRound')
+  })
 </script>
 
 <style lang="scss" scoped>
@@ -116,4 +126,5 @@ const rounds = computed(() => (props.vehicleId ? roundsOf(props.vehicleId) : [])
 .strong { font-size: 18px; font-weight: 600; }
 .price { color: var(--el-color-primary); }
 .awarded { border: 1px solid var(--el-color-primary-light-8); }
+.settled-note { margin: 0 0 16px; }
 </style>

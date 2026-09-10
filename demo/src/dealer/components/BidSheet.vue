@@ -24,6 +24,7 @@
               autocomplete="off"
               :placeholder="t('bid.placeholder')"
               @input="onInput"
+              @blur="onBlur"
             />
             <span class="yen">円</span>
           </div>
@@ -106,7 +107,15 @@ watch(
 )
 
 function onInput() {
-  display.value = groupAmountInput(display.value)
+  // 入力中はマイナス記号を許容し、blur 時に 0 へ丸める
+  const raw = String(display.value ?? '')
+  const negative = raw.trim().startsWith('-')
+  display.value = (negative ? '-' : '') + groupAmountInput(raw)
+}
+
+// 負の数を入力した場合、blur した時点で欄の値を 0 にする
+function onBlur() {
+  if (String(display.value ?? '').trim().startsWith('-')) display.value = '0'
 }
 
 function add(n) {

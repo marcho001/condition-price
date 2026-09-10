@@ -4,7 +4,6 @@ import { dealerById } from '@/shared/engine.js'
 
 const routes = [
   { path: '/login', name: 'login', component: () => import('./views/LoginView.vue'), meta: { public: true } },
-  { path: '/forgot', name: 'forgot', component: () => import('./views/ForgotView.vue'), meta: { public: true } },
   { path: '/', name: 'list', component: () => import('./views/AuctionListView.vue') },
   { path: '/auction/:roundId', name: 'detail', component: () => import('./views/AuctionDetailView.vue') },
   { path: '/mybids', name: 'mybids', component: () => import('./views/MyBidsView.vue') },
@@ -19,6 +18,7 @@ const router = createRouter({
 })
 
 // 未ログインは車両情報を一切表示せず、ログイン画面へ
+// （パスワードの再設定・変更機能は本サイトに存在しないため、公開ルートはログインのみ）
 router.beforeEach((to) => {
   const dealer = db.dealerSession ? dealerById(db.dealerSession) : null
   const ok = dealer && dealer.status === 'ACTIVE'

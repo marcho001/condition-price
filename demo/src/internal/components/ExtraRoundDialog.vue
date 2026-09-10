@@ -9,7 +9,7 @@
       <div class="target">
         <b>{{ vehicle.orderNo }}</b>
         <span>{{ view.makeName }} {{ view.seriesName }}</span>
-        <span>{{ t('auction.roundN', { n: prev.round + 1 }) }}</span>
+        <span>{{ t('auction.roundNType', { n: prev.round + 1, type: t('auction.extraRound') }) }}</span>
       </div>
 
       <el-form label-position="top" style="margin-top: 12px">

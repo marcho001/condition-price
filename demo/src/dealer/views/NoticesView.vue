@@ -57,11 +57,12 @@ const rows = computed(() =>
     const view = vehicleView(vehicle)
     const car = `${view.makeName || ''} ${view.seriesName || ''}`.trim()
     const award = awardOf(n.vehicleId)
+    // 車両はメーカー＋車系＋ナンバープレートで識別する（OrderNo は対外通知に一切含めない）
     const params = {
       car,
-      order: vehicle?.orderNo || '',
+      carYear: view.carYear || '',
+      plate: view.licensingPlateNumber || '',
       end: round ? fmtDate(round.endDate) : '',
-      round: round?.round || '',
       price: round ? yenJa(round.startPrice) : '',
       amount: award ? yenJa(award.amount) : ''
     }

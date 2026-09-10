@@ -2,7 +2,7 @@ import { reactive, ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
 import { buildSeed } from './seed.js'
 
-const KEY = 'jp-auction-demo/v1'
+const KEY = 'jp-auction-demo/v2'
 const CHANNEL = 'jp-auction-demo'
 
 function load() {
@@ -10,7 +10,7 @@ function load() {
     const raw = localStorage.getItem(KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (!parsed || parsed.version !== 1) return null
+    if (!parsed || parsed.version !== 2) return null
     // seed 的日期都是相對今天算的，跨日後重建，避免截止時間變成過去
     if (!dayjs(parsed.seededAt).isSame(dayjs(), 'day')) return null
     return parsed

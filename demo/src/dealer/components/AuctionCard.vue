@@ -2,7 +2,8 @@
   <RouterLink class="ac card" :to="{ name: 'detail', params: { roundId: round.id } }">
     <div class="ph">
       <img :src="photo" :alt="`${view.makeName} ${view.seriesName}`" loading="lazy" />
-      <span v-if="round.round > 1" class="round-tag">{{ t('card.extraRound') }}</span>
+      <!-- 追加ラウンドのみ標記（第何ラウンドかは表示しない）。初回ラウンドは無標記 -->
+      <span v-if="isExtraRound" class="round-tag">{{ t('card.extraRound') }}</span>
       <CountdownBoard class="board-overlay" :round="round" />
     </div>
 
@@ -18,6 +19,11 @@
 
       <div class="foot">
         <div class="pair">
+          <span>{{ t('card.period') }}</span>
+          <b class="fig period">{{ fmtDate(round.startDate) }} 〜 {{ fmtDate(round.endDate) }}</b>
+        </div>
+        <!-- 第一輪は開始価格を提示しない（追加ラウンドのみ表示） -->
+        <div v-if="isExtraRound" class="pair">
           <span>{{ t('card.startPrice') }}</span>
           <b class="fig">{{ yenJa(round.startPrice) }}</b>
         </div>
@@ -37,7 +43,7 @@ import { useI18n } from 'vue-i18n'
 import CountdownBoard from './CountdownBoard.vue'
 import { vehicleView, bidOf } from '@/shared/engine.js'
 import { carPhoto, placeholderPhoto } from '@/shared/photos.js'
-import { km, yenJa } from '@/shared/format.js'
+import { km, yenJa, fmtDate } from '@/shared/format.js'
 import { db } from '@/shared/store.js'
 
 const props = defineProps({
@@ -48,6 +54,7 @@ const props = defineProps({
 const { t } = useI18n()
 const view = computed(() => vehicleView(props.vehicle))
 const myBid = computed(() => bidOf(props.round.id, db.dealerSession))
+const isExtraRound = computed(() => props.round.round > 1)
 
 const photo = computed(() => {
   const first = props.vehicle.attachments.find((a) => a.category === 'CAR_PHOTO')
@@ -110,4 +117,5 @@ h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.01em; }
 .pair b { font-size: 15px; color: var(--ink); }
 .pair.mine b { color: var(--bid); }
 .pair.mine b.none { color: var(--ink-3); font-size: 12.5px; font-weight: 500; }
+.pair b.period { font-size: 12.5px; font-weight: 500; letter-spacing: 0.02em; }
 </style>

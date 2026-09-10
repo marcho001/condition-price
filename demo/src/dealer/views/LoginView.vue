@@ -23,7 +23,8 @@
           <button class="btn btn-primary btn-block" type="submit">{{ t('login.submit') }}</button>
         </form>
 
-        <RouterLink class="forgot" :to="{ name: 'forgot' }">{{ t('login.forgot') }}</RouterLink>
+        <!-- 本サイトにはパスワードの再設定・変更機能はありません（担当者が再発行） -->
+        <p class="pw-note">{{ t('login.passwordNote') }}</p>
       </div>
 
       <div class="sheet-foot">
@@ -45,6 +46,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { db } from '@/shared/store.js'
+import { dealerLogin } from '@/shared/engine.js'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -61,18 +63,21 @@ function fill(d) {
   error.value = ''
 }
 
+// 連続 5 回の失敗でアカウントをロック。解除は社内の「ロック解除」のみ（自動解除なし）
+const ERROR_KEY = {
+  BAD_CREDENTIAL: 'login.error',
+  LOCKED: 'login.locked',
+  LOCKED_RETRY: 'login.lockedRetry',
+  DISABLED: 'login.disabled'
+}
+
 function submit() {
   error.value = ''
-  const found = db.dealers.find((d) => d.email.toLowerCase() === email.value.toLowerCase())
-  if (!found || found.password !== password.value) {
-    error.value = t('login.error')
+  const res = dealerLogin(email.value, password.value)
+  if (!res.ok) {
+    error.value = t(ERROR_KEY[res.error] || 'login.error')
     return
   }
-  if (found.status !== 'ACTIVE') {
-    error.value = t('login.disabled')
-    return
-  }
-  db.dealerSession = found.id
   router.replace({ name: 'list' })
 }
 </script>
@@ -118,12 +123,14 @@ h1 { margin: 0 0 8px; font-size: 19px; font-weight: 600; letter-spacing: 0.01em;
   color: var(--seal);
 }
 
-.forgot {
-  display: inline-block;
-  margin-top: 16px;
-  font-size: 13px;
-  color: var(--bid);
-  border-bottom: 1px solid currentColor;
+.pw-note {
+  margin: 18px 0 0;
+  font-size: 12px;
+  line-height: 1.85;
+  color: var(--ink-3);
+  background: var(--sheet);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
 }
 
 .sheet-foot {

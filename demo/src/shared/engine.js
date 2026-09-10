@@ -1,7 +1,7 @@
 import dayjs from 'dayjs'
 import { db, serverNow, uid } from './store.js'
 import { endOfDay } from './format.js'
-import { VEHICLE_STATUS, AWARD_METHOD, NOTICE_TYPE, EDITABLE_KEYS } from './constants.js'
+import { VEHICLE_STATUS, AWARD_METHOD, NOTICE_TYPE, EMAIL_TYPE, EDITABLE_KEYS } from './constants.js'
 
 // ── 查詢 ─────────────────────────────────────────────
 export const vehicleById = (id) => db.vehicles.find((v) => v.id === id)
@@ -92,8 +92,10 @@ export const awardOf = (vehicleId) => db.awards.find((a) => a.vehicleId === vehi
 export const activeDealers = () => db.dealers.filter((x) => x.status === 'ACTIVE')
 
 // ── 通知 ─────────────────────────────────────────────
+// 停用中の販売店には拍賣通知を送らない（催促も含む）。
+// 既に送信済みの入札は順位に残るため、通知の停止のみが停用の効果。
 function notify(dealerIds, type, vehicleId, roundId) {
-  dealerIds.forEach((dealerId) => {
+  dealerIds.filter((id) => dealerById(id)?.status === 'ACTIVE').forEach((dealerId) => {
     db.notifications.push({
       id: uid('N'),
       dealerId,
@@ -105,6 +107,23 @@ function notify(dealerIds, type, vehicleId, roundId) {
     })
   })
 }
+
+// 帳號通知（事件 6、7）僅 Email —— 不發 SMS、不進站內通知
+function sendAccountEmail(dealer, type, password) {
+  db.emails.push({
+    id: uid('M'),
+    dealerId: dealer.id,
+    to: dealer.email,
+    type,
+    password,
+    at: serverNow.value
+  })
+}
+
+export const emailsOf = (dealerId) =>
+  db.emails.filter((m) => m.dealerId === dealerId).sort((a, b) => b.at - a.at)
+
+export const allEmails = () => [...db.emails].sort((a, b) => b.at - a.at)
 
 export const notificationsOf = (dealerId) =>
   db.notifications.filter((n) => n.dealerId === dealerId).sort((a, b) => b.at - a.at)
@@ -241,8 +260,8 @@ export function sendUrge(roundId, by) {
 
 // ── 出價 ─────────────────────────────────────────────
 export function bidFloor(round) {
-  // 第一輪：≥ 0 円。加價輪：必須高於起標價
-  return round.round === 1 ? 0 : round.startPrice + 1
+  // 下限一律 ≥ 1 円。第一輪：≥ 1 円（起標價 0 元僅為顯示基準）。加價輪：必須高於起標價
+  return round.round === 1 ? 1 : round.startPrice + 1
 }
 
 export function placeBid(roundId, dealerId, amount) {
@@ -286,8 +305,33 @@ export function canDesignate(roundId) {
   return high.amount !== null && high.dealerIds.length > 1
 }
 
+// 成交通知（拍賣 → 貸後）：三支介接 API 中唯一由本模組主動發出的一支。
+// 呼叫成功才視為已決標；失敗時訂單留在已結標、狀態不變，得標／未得標通知一律不發。
+export function callDealClosedApi(payload) {
+  const ok = !db.demo.dealApiFail
+  db.callbackLogs.push({
+    id: uid('CB'),
+    api: 'dealClosed',
+    direction: 'out',
+    payload,
+    result: ok ? 'SUCCESS' : 'FAILED',
+    at: serverNow.value
+  })
+  return ok
+}
+
 function finishAward(vehicleId, roundId, dealerId, amount, method, operator) {
   const round = roundById(roundId)
+  const vehicle = vehicleById(vehicleId)
+  const at = serverNow.value
+
+  // 先呼叫貸後的成交通知，回應成功後才轉入已決標
+  const sent = callDealClosedApi({ orderNo: vehicle.orderNo, dealerId, amount, at })
+  if (!sent) {
+    audit('auction.award.failed', { vehicleId, roundId, dealerId, amount, method, operator })
+    return false
+  }
+
   db.awards.push({
     vehicleId,
     roundId,
@@ -295,11 +339,11 @@ function finishAward(vehicleId, roundId, dealerId, amount, method, operator) {
     amount,
     method,
     operator,
-    at: serverNow.value,
-    completed: false,
-    completedAt: null
+    at,
+    settled: false,
+    settledAt: null
   })
-  vehicleById(vehicleId).status = VEHICLE_STATUS.AWARDED
+  vehicle.status = VEHICLE_STATUS.AWARDED
   notify([dealerId], NOTICE_TYPE.WON, vehicleId, roundId)
   notify(
     round.inviteeIds.filter((id) => id !== dealerId),
@@ -308,43 +352,126 @@ function finishAward(vehicleId, roundId, dealerId, amount, method, operator) {
     roundId
   )
   audit('auction.award', { vehicleId, roundId, dealerId, amount, method, operator })
+  return true
 }
 
 export function awardRound(vehicleId, roundId, operator) {
   if (!canAward(roundId)) return { ok: false, error: 'NOT_ALLOWED' }
   const high = highestOfRound(roundId)
-  finishAward(vehicleId, roundId, high.dealerIds[0], high.amount, AWARD_METHOD.AWARD, operator)
-  return { ok: true }
+  const ok = finishAward(vehicleId, roundId, high.dealerIds[0], high.amount, AWARD_METHOD.AWARD, operator)
+  return ok ? { ok: true } : { ok: false, error: 'DEAL_API_FAILED' }
 }
 
 export function designateWinner(vehicleId, roundId, dealerId, operator) {
   const high = highestOfRound(roundId)
   if (!canDesignate(roundId) || !high.dealerIds.includes(dealerId))
     return { ok: false, error: 'NOT_ALLOWED' }
-  finishAward(vehicleId, roundId, dealerId, high.amount, AWARD_METHOD.DESIGNATE, operator)
+  const ok = finishAward(vehicleId, roundId, dealerId, high.amount, AWARD_METHOD.DESIGNATE, operator)
+  return ok ? { ok: true } : { ok: false, error: 'DEAL_API_FAILED' }
+}
+
+// ── 與貸後的介接（入向兩支，須冪等；本模組不提供對應的手動按鈕）────────
+// 收車通知：貸後收車後帶 orderNo 呼叫，本模組依 orderNo 取進件資料建立待排定拍賣的車輛
+export function receiveVehicleCallback({ orderNo, receivedAt, operator }) {
+  const log = (result) =>
+    db.callbackLogs.push({
+      id: uid('CB'),
+      api: 'receiveVehicle',
+      direction: 'in',
+      payload: { orderNo, receivedAt, operator },
+      result,
+      at: serverNow.value
+    })
+
+  const exist = db.vehicles.find((v) => v.orderNo === orderNo)
+  if (exist) {
+    // 同一 orderNo 重複呼叫不重複建立，回既有那筆並視為成功
+    log('DUPLICATED')
+    return { ok: true, duplicated: true, vehicle: exist }
+  }
+  const intake = db.intakePool.find((x) => x.orderNo === orderNo)
+  if (!intake) {
+    log('ORDER_NOT_FOUND')
+    return { ok: false, error: 'ORDER_NOT_FOUND' }
+  }
+  if (!receivedAt) {
+    log('RECEIVED_AT_REQUIRED')
+    return { ok: false, error: 'RECEIVED_AT_REQUIRED' }
+  }
+  const vehicle = {
+    ...JSON.parse(JSON.stringify(intake.vehicle)),
+    receivedAt,
+    status: VEHICLE_STATUS.PENDING_SCHEDULE
+  }
+  db.vehicles.push(vehicle)
+  db.intakePool.splice(db.intakePool.indexOf(intake), 1)
+  log('SUCCESS')
+  audit('callback.receiveVehicle', { orderNo, receivedAt, operator })
+  return { ok: true, vehicle }
+}
+
+// 結清通知：貸後在車輛過戶並收到款項後呼叫，本模組註記結清並以軟刪除自已決標移除
+export function settleOrderCallback({ orderNo }) {
+  const log = (result) =>
+    db.callbackLogs.push({
+      id: uid('CB'),
+      api: 'settleOrder',
+      direction: 'in',
+      payload: { orderNo },
+      result,
+      at: serverNow.value
+    })
+
+  const vehicle = db.vehicles.find((v) => v.orderNo === orderNo)
+  if (!vehicle) {
+    log('ORDER_NOT_FOUND')
+    return { ok: false, error: 'ORDER_NOT_FOUND' }
+  }
+  const award = awardOf(vehicle.id)
+  if (!award) {
+    log('NOT_AWARDED')
+    return { ok: false, error: 'NOT_AWARDED' }
+  }
+  if (award.settled) {
+    // 重複呼叫不重複處理，回既有那筆並視為成功
+    log('DUPLICATED')
+    return { ok: true, duplicated: true }
+  }
+  award.settled = true
+  award.settledAt = serverNow.value
+  vehicle.status = VEHICLE_STATUS.SETTLED
+  log('SUCCESS')
+  audit('callback.settleOrder', { orderNo })
   return { ok: true }
 }
 
-export function markCompleted(vehicleId, operator) {
-  const a = awardOf(vehicleId)
-  if (!a) return { ok: false }
-  a.completed = true
-  a.completedAt = serverNow.value
-  vehicleById(vehicleId).status = VEHICLE_STATUS.DONE
-  audit('auction.complete', { vehicleId, operator })
-  return { ok: true }
-}
+// 已決標且尚未結清的訂單 —— 結清是離開已決標列表的唯一觸發點
+export const settleableOrders = () =>
+  db.awards
+    .filter((a) => !a.settled)
+    .map((a) => ({ award: a, vehicle: vehicleById(a.vehicleId) }))
+    .filter((x) => x.vehicle && x.vehicle.status === VEHICLE_STATUS.AWARDED)
 
 // ── 廠商管理 ──────────────────────────────────────────
+export const LOGIN_FAIL_LIMIT = 5
+
+function genPassword() {
+  return `xs${Math.random().toString(36).slice(2, 8)}`
+}
+
 export function addDealer(payload, operator) {
   const dealer = {
     id: uid('DL'),
     status: 'ACTIVE',
-    password: 'demo1234',
+    password: genPassword(),
+    locked: false,
+    loginFailCount: 0,
     createdAt: serverNow.value,
     ...payload
   }
   db.dealers.push(dealer)
+  // 建檔同時開通對外站帳號，初始密碼僅以 Email 寄至登入帳號
+  sendAccountEmail(dealer, EMAIL_TYPE.ACCOUNT_ISSUED, dealer.password)
   audit('dealer.add', { dealerId: dealer.id, operator })
   return dealer
 }
@@ -356,13 +483,46 @@ export function updateDealer(id, patch, operator) {
   audit('dealer.update', { dealerId: id, operator })
 }
 
+// 重設密碼：舊密碼即刻失效、新密碼僅寄至登入 Email。本操作不解除帳號鎖定
 export function resetDealerPassword(id, operator) {
   const d = dealerById(id)
   if (!d) return null
-  const pwd = `xs${Math.random().toString(36).slice(2, 8)}`
-  d.password = pwd
+  d.password = genPassword()
+  sendAccountEmail(d, EMAIL_TYPE.PASSWORD_RESET, d.password)
   audit('dealer.resetPassword', { dealerId: id, operator })
-  return pwd
+  return d.password
+}
+
+// 解鎖：僅在鎖定中可用，錯誤次數一併歸零。系統不提供自動解鎖
+export function unlockDealer(id, operator) {
+  const d = dealerById(id)
+  if (!d || !d.locked) return { ok: false, error: 'NOT_LOCKED' }
+  d.locked = false
+  d.loginFailCount = 0
+  audit('dealer.unlock', { dealerId: id, operator })
+  return { ok: true }
+}
+
+// ── 對外站登入 ────────────────────────────────────────
+// 連續錯誤達 5 次自動鎖定；鎖定後不論帳密正確與否一律拒絕；成功登入錯誤次數歸零
+export function dealerLogin(email, password) {
+  const d = db.dealers.find((x) => x.email.toLowerCase() === String(email || '').toLowerCase())
+  if (d && d.locked) return { ok: false, error: 'LOCKED_RETRY' }
+  if (!d || d.password !== password) {
+    if (d) {
+      d.loginFailCount = (d.loginFailCount || 0) + 1
+      if (d.loginFailCount >= LOGIN_FAIL_LIMIT) {
+        d.locked = true
+        audit('dealer.lock', { dealerId: d.id, reason: 'LOGIN_FAIL_LIMIT' })
+        return { ok: false, error: 'LOCKED' }
+      }
+    }
+    return { ok: false, error: 'BAD_CREDENTIAL' }
+  }
+  if (d.status !== 'ACTIVE') return { ok: false, error: 'DISABLED' }
+  d.loginFailCount = 0
+  db.dealerSession = d.id
+  return { ok: true, dealer: d }
 }
 
 // ── 自動處理：結標與自動催投 ────────────────────────────
@@ -399,7 +559,7 @@ export function dealerOpenAuctions(dealerId) {
 
 export function dealerWonList(dealerId) {
   return db.awards
-    .filter((a) => a.dealerId === dealerId && !a.completed)
+    .filter((a) => a.dealerId === dealerId && !a.settled)
     .map((a) => ({ award: a, vehicle: vehicleById(a.vehicleId), round: roundById(a.roundId) }))
     .filter((x) => x.vehicle && x.vehicle.status === VEHICLE_STATUS.AWARDED)
     .sort((a, b) => b.award.at - a.award.at)

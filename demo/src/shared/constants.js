@@ -22,12 +22,6 @@ export const VEHICLE_FIELDS = [
   { key: 'remark', ja: '備考', zh: '備註', editable: true, external: true, type: 'textarea', full: true }
 ]
 
-// 內部參考價 —— 一律不對廠商揭露（規格 6.1 / 實作筆記 6.1 注意事項 2）
-export const INTERNAL_ONLY_FIELDS = [
-  { key: 'guidePrice', ja: '車両価格範囲', zh: '车辆价格范围' },
-  { key: 'valuationPrice', ja: '車両評価', zh: '车辆估值' }
-]
-
 export const EDITABLE_KEYS = VEHICLE_FIELDS.filter((f) => f.editable).map((f) => f.key)
 
 // 附件分類 —— 白名單，未列於此者一律不顯示、不對外呈現（規格 4.4.1）
@@ -43,10 +37,10 @@ export const ATTACHMENT_CATEGORIES = {
 
 export const VEHICLE_STATUS = {
   PENDING_SCHEDULE: 'PENDING_SCHEDULE', // 待排定拍賣
-  IN_AUCTION: 'IN_AUCTION', // 拍賣進行中
+  IN_AUCTION: 'IN_AUCTION', // 投標中
   CLOSED: 'CLOSED', // 已結標
   AWARDED: 'AWARDED', // 已決標
-  DONE: 'DONE' // 已完成（不在任何列表呈現）
+  SETTLED: 'SETTLED' // 已結清（貸後結清通知後軟刪除，不在任何列表呈現）
 }
 
 export const AWARD_METHOD = {
@@ -54,7 +48,7 @@ export const AWARD_METHOD = {
   DESIGNATE: 'DESIGNATE' // 指定成交廠商
 }
 
-// 通知事件 —— 內部規格第八章 / 對外規格 8.2
+// 拍賣通知（事件 1〜5）—— Email + SMS + 對外站站內通知，三者同時發送
 export const NOTICE_TYPE = {
   NEW_AUCTION: 'NEW_AUCTION',
   EXTRA_ROUND_INVITE: 'EXTRA_ROUND_INVITE',
@@ -62,6 +56,20 @@ export const NOTICE_TYPE = {
   WON: 'WON',
   LOST: 'LOST'
 }
+
+// 帳號通知（事件 6、7）—— 僅 Email，不發 SMS、不進站內通知
+export const EMAIL_TYPE = {
+  ACCOUNT_ISSUED: 'ACCOUNT_ISSUED',
+  PASSWORD_RESET: 'PASSWORD_RESET'
+}
+
+// 輪次類型 —— 列表與篩選一律只用這兩個值，不顯示第幾輪
+export const ROUND_TYPE = {
+  FIRST: 'FIRST',
+  EXTRA: 'EXTRA'
+}
+
+export const roundTypeOf = (round) => (round && round.round > 1 ? ROUND_TYPE.EXTRA : ROUND_TYPE.FIRST)
 
 export const ROLE = {
   OPERATION: 'auction:operation', // 拍賣營運

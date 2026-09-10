@@ -20,7 +20,8 @@
         </div>
         <div class="info-grid">
           <div class="info-item">
-            <div class="u-value">{{ t('auction.roundN', { n: round.round }) }}</div>
+            <!-- 彈窗顯示輪次序號（列表只顯示輪次類型） -->
+            <div class="u-value">{{ roundNType(round) }}</div>
             <div class="u-label">{{ t('auction.round') }}</div>
           </div>
           <div class="info-item">
@@ -92,7 +93,7 @@
           <el-collapse-item v-for="r in prevRounds" :key="r.id" :name="r.id">
             <template #title>
               <span class="num">
-                {{ t('auction.roundN', { n: r.round }) }}　{{ fmtDate(r.startDate) }} 〜 {{ fmtDate(r.endDate) }}
+                {{ roundNType(r) }}　{{ fmtDate(r.startDate) }} 〜 {{ fmtDate(r.endDate) }}
                 　{{ t('auction.startPrice') }} {{ yenJa(r.startPrice) }}
               </span>
             </template>
@@ -176,6 +177,7 @@ import {
   dealerById
 } from '@/shared/engine.js'
 import { db } from '@/shared/store.js'
+import { ROUND_TYPE, roundTypeOf } from '@/shared/constants.js'
 import { fmtDate, fmtDateTime, yenJa } from '@/shared/format.js'
 
 const props = defineProps({ modelValue: Boolean, roundId: String })
@@ -196,6 +198,12 @@ const prevRounds = computed(() =>
   round.value ? roundsOf(round.value.vehicleId).filter((r) => r.round < round.value.round) : []
 )
 
+const roundNType = (r) =>
+  t('auction.roundNType', {
+    n: r.round,
+    type: roundTypeOf(r) === ROUND_TYPE.EXTRA ? t('auction.extraRound') : t('auction.firstRound')
+  })
+
 async function doAward() {
   const winner = dealerById(high.value.dealerIds[0])
   try {
@@ -207,7 +215,12 @@ async function doAward() {
   } catch {
     return
   }
-  awardRound(round.value.vehicleId, round.value.id, db.internalUser.name)
+  const res = awardRound(round.value.vehicleId, round.value.id, db.internalUser.name)
+  if (!res.ok) {
+    // 成交通知呼叫失敗 —— 彈窗保持開啟，可再次點「決標」重試
+    ElMessage.error(t('auction.awardFailed'))
+    return
+  }
   ElMessage.success(t('auction.awardDone'))
   emit('update:modelValue', false)
   emit('done')
@@ -224,7 +237,16 @@ async function doDesignate() {
   } catch {
     return
   }
-  designateWinner(round.value.vehicleId, round.value.id, designatePick.value, db.internalUser.name)
+  const res = designateWinner(
+    round.value.vehicleId,
+    round.value.id,
+    designatePick.value,
+    db.internalUser.name
+  )
+  if (!res.ok) {
+    ElMessage.error(t('auction.awardFailed'))
+    return
+  }
   ElMessage.success(t('auction.awardDone'))
   designateOpen.value = false
   designatePick.value = ''

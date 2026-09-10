@@ -22,7 +22,8 @@
         </div>
         <div class="info-grid">
           <div class="info-item">
-            <div class="u-value">{{ t('auction.roundN', { n: round.round }) }}</div>
+            <!-- 彈窗顯示輪次序號（列表只顯示輪次類型） -->
+            <div class="u-value">{{ roundNTypeLabel }}</div>
             <div class="u-label">{{ t('auction.round') }}</div>
           </div>
           <div class="info-item">
@@ -30,16 +31,18 @@
             <div class="u-label">{{ t('auction.period') }}</div>
           </div>
           <div class="info-item">
-            <div class="u-value"><Countdown :round="round" /></div>
-            <div class="u-label">{{ t('auction.remaining') }}</div>
-          </div>
-          <div class="info-item">
             <div class="u-value num">{{ yenJa(round.startPrice) }}</div>
             <div class="u-label">{{ t('auction.startPrice') }}</div>
+          </div>
+          <div class="info-item">
+            <div class="u-value num">{{ t('auction.bidderCountUnit', { n: bidCount }) }}</div>
+            <div class="u-label">{{ t('auction.bidderCount') }}</div>
           </div>
         </div>
 
         <el-divider />
+        <div class="info-subtitle">{{ t('auction.bidStatus') }}</div>
+        <!-- 各廠商僅顯示狀態，不含金額 -->
         <p class="section-hint" style="margin-bottom: 8px">{{ t('auction.amountHidden') }}</p>
         <div class="bid-status">
           <div v-for="row in bidStatus" :key="row.dealerId" class="bid-chip" :class="{ on: row.bidded }">
@@ -82,23 +85,6 @@
           </el-table-column>
         </el-table>
       </div>
-
-      <div class="info-section internal-price">
-        <div class="info-title">
-          {{ t('vehicle.sectionInternal') }}
-          <el-tag type="danger" size="small" effect="plain">内部限定</el-tag>
-        </div>
-        <div class="info-grid">
-          <div class="info-item">
-            <div class="u-value num">{{ vehicle.guidePrice || '—' }}</div>
-            <div class="u-label">{{ locale === 'zh' ? '车辆价格范围' : '車両価格範囲' }}</div>
-          </div>
-          <div class="info-item">
-            <div class="u-value num">{{ vehicle.valuationPrice || '—' }}</div>
-            <div class="u-label">{{ locale === 'zh' ? '车辆估值' : '車両評価' }}</div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <template #footer>
@@ -112,9 +98,8 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import VehicleInfoGrid from './VehicleInfoGrid.vue'
 import AttachmentPanel from './AttachmentPanel.vue'
-import Countdown from './Countdown.vue'
-import { VEHICLE_FIELDS, VEHICLE_STATUS } from '@/shared/constants.js'
-import { vehicleById, vehicleView, latestRound, bidOf, dealerById } from '@/shared/engine.js'
+import { VEHICLE_FIELDS, VEHICLE_STATUS, ROUND_TYPE, roundTypeOf } from '@/shared/constants.js'
+import { vehicleById, vehicleView, latestRound, bidOf, bidsOfRound, dealerById } from '@/shared/engine.js'
 import { fmtDate, fmtDateTime, yenJa } from '@/shared/format.js'
 
 const props = defineProps({
@@ -139,6 +124,19 @@ const lockReason = computed(() =>
     ? t('vehicle.lockedInAuction')
     : t('vehicle.lockedClosed')
 )
+
+// 彈窗顯示格式：第 N 輪・輪次類型
+const roundNTypeLabel = computed(() =>
+  round.value
+    ? t('auction.roundNType', {
+        n: round.value.round,
+        type:
+          roundTypeOf(round.value) === ROUND_TYPE.EXTRA ? t('auction.extraRound') : t('auction.firstRound')
+      })
+    : ''
+)
+
+const bidCount = computed(() => (round.value ? bidsOfRound(round.value.id).length : 0))
 
 const bidStatus = computed(() => {
   if (!round.value) return []
@@ -165,6 +163,12 @@ const fieldLabelOf = (key) => {
 .dlg-title { font-size: 17px; font-weight: 600; color: #222; }
 .dlg-sub { font-size: 13px; color: #909399; }
 
+.info-subtitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #222;
+  margin-bottom: 4px;
+}
 .bid-status {
   display: flex;
   flex-wrap: wrap;
@@ -195,9 +199,5 @@ const fieldLabelOf = (key) => {
   color: #909399;
   b { color: #e6a23c; }
   b.sent { color: #67c23a; }
-}
-.internal-price {
-  border: 1px dashed #f0c8c4;
-  background: #fffaf9;
 }
 </style>
