@@ -17,9 +17,11 @@
         <el-input v-model="form.phone" maxlength="20" />
         <p class="section-hint" style="margin: 4px 0 0">{{ t('dealer.phoneHint') }}</p>
       </el-form-item>
+      <!-- 編集時も Email は disable しない（＝ログイン ID の変更） -->
       <el-form-item :label="t('dealer.email')" prop="email">
-        <el-input v-model="form.email" maxlength="80" :disabled="isEdit" />
+        <el-input v-model="form.email" maxlength="80" />
         <p class="section-hint" style="margin: 4px 0 0">{{ t('dealer.emailHint') }}</p>
+        <p v-if="isEdit" class="section-hint" style="margin: 2px 0 0">{{ t('dealer.loginIdChangeHint') }}</p>
       </el-form-item>
       <el-form-item :label="t('dealer.remark')">
         <el-input v-model="form.remark" type="textarea" :rows="2" maxlength="120" show-word-limit />
@@ -36,8 +38,8 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
-import { addDealer, updateDealer, dealerById } from '@/shared/engine.js'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { addDealer, updateDealer, dealerById, isLoginIdTaken } from '@/shared/engine.js'
 import { db } from '@/shared/store.js'
 
 const props = defineProps({ modelValue: Boolean, dealerId: String })
@@ -54,7 +56,13 @@ const rules = computed(() => ({
   phone: [{ required: true, message: t('common.required'), trigger: 'blur' }],
   email: [
     { required: true, message: t('common.required'), trigger: 'blur' },
-    { type: 'email', message: 'Email', trigger: 'blur' }
+    { type: 'email', message: 'Email', trigger: 'blur' },
+    // 他の販売店（停止中も含む）のログイン ID と重複させない
+    {
+      validator: (_r, value, cb) =>
+        isLoginIdTaken(value, props.dealerId) ? cb(new Error(t('dealer.emailTaken'))) : cb(),
+      trigger: 'blur'
+    }
   ]
 }))
 
@@ -77,8 +85,25 @@ watch(
 async function submit() {
   const ok = await formRef.value.validate().catch(() => false)
   if (!ok) return
-  if (isEdit.value) updateDealer(props.dealerId, { ...form }, db.internalUser.name)
-  else addDealer({ ...form }, db.internalUser.name)
+
+  if (isEdit.value) {
+    const current = dealerById(props.dealerId)
+    // ログイン ID の変更は二次確認。旧 Email は即時に使えなくなり、パスワードは変わらない
+    if (current && current.email !== form.email) {
+      try {
+        await ElMessageBox.confirm(
+          t('dealer.loginIdChangeConfirm', { before: current.email, after: form.email }),
+          t('dealer.loginIdChangeTitle'),
+          { type: 'warning' }
+        )
+      } catch {
+        return
+      }
+    }
+    updateDealer(props.dealerId, { ...form }, db.internalUser.name)
+  } else {
+    addDealer({ ...form }, db.internalUser.name)
+  }
   ElMessage.success(t('common.save'))
   emit('update:modelValue', false)
   emit('done')

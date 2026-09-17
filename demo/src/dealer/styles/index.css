@@ -271,6 +271,8 @@ a { color: inherit; text-decoration: none; }
 .btn-primary:hover { background: #0a4491; }
 .btn-ghost { border-color: var(--rule); color: var(--ink); }
 .btn-ghost:hover { background: var(--sheet); }
+.btn-danger { background: var(--seal); color: #fff; }
+.btn-danger:hover { background: #a92c23; }
 .btn-quiet { border-color: transparent; color: var(--ink-3); }
 .btn-block { width: 100%; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }

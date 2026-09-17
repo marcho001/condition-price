@@ -1,16 +1,17 @@
 <template>
   <RouterLink class="ac card" :to="{ name: 'detail', params: { roundId: round.id } }">
-    <div class="ph">
-      <img :src="photo" :alt="`${view.makeName} ${view.seriesName}`" loading="lazy" />
-      <!-- 追加ラウンドのみ標記（第何ラウンドかは表示しない）。初回ラウンドは無標記 -->
-      <span v-if="isExtraRound" class="round-tag">{{ t('card.extraRound') }}</span>
-      <CountdownBoard class="board-overlay" :round="round" />
-    </div>
+    <!-- 締切看板は写真がなくなってもカードの要 —— カード上端に横帯として残す -->
+    <CountdownBoard class="board-top" :round="round" />
 
     <div class="body">
-      <h3>{{ view.makeName }} {{ view.seriesName }}</h3>
+      <div class="title-row">
+        <h3>{{ view.makeName }} {{ view.seriesName }}</h3>
+        <!-- 追加ラウンドのみ標記（第何ラウンドかは表示しない）。初回ラウンドは無標記 -->
+        <span v-if="isExtraRound" class="round-tag">{{ t('card.extraRound') }}</span>
+      </div>
       <p class="grade">{{ view.modelName }}</p>
 
+      <!-- カードに写真は載せない（写真は車両詳細ページのみ）。文字情報で車両を識別する -->
       <dl class="specs">
         <div><dt>年式</dt><dd class="fig">{{ view.carYear }}</dd></div>
         <div><dt>走行</dt><dd class="fig">{{ km(view.mileage) }}</dd></div>
@@ -42,7 +43,6 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CountdownBoard from './CountdownBoard.vue'
 import { vehicleView, bidOf } from '@/shared/engine.js'
-import { carPhoto, placeholderPhoto } from '@/shared/photos.js'
 import { km, yenJa, fmtDate } from '@/shared/format.js'
 import { db } from '@/shared/store.js'
 
@@ -55,12 +55,6 @@ const { t } = useI18n()
 const view = computed(() => vehicleView(props.vehicle))
 const myBid = computed(() => bidOf(props.round.id, db.dealerSession))
 const isExtraRound = computed(() => props.round.round > 1)
-
-const photo = computed(() => {
-  const first = props.vehicle.attachments.find((a) => a.category === 'CAR_PHOTO')
-  if (!first) return placeholderPhoto()
-  return first.dataUrl || carPhoto(first.kind, view.value)
-})
 </script>
 
 <style scoped>
@@ -70,15 +64,15 @@ const photo = computed(() => {
 }
 .ac:hover { transform: translateY(-2px); box-shadow: 0 2px 4px rgba(18,21,26,.05), 0 14px 30px rgba(18,21,26,.10); }
 
-.ph { position: relative; aspect-ratio: 16 / 10; background: var(--sheet-2); }
-.ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.board-top { display: block; }
 
-.board-overlay { position: absolute; left: 0; right: 0; bottom: 0; }
+.body { padding: 13px 15px 15px; }
+
+.title-row { display: flex; align-items: baseline; gap: 8px; }
+h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.01em; flex: 1; min-width: 0; }
 
 .round-tag {
-  position: absolute;
-  top: 10px;
-  left: 10px;
+  flex: none;
   background: var(--seal);
   color: #fff;
   font-size: 11px;
@@ -87,9 +81,6 @@ const photo = computed(() => {
   border-radius: 4px;
 }
 
-.body { padding: 13px 15px 15px; }
-
-h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: 0.01em; }
 .grade {
   margin: 2px 0 11px;
   font-size: 12.5px;

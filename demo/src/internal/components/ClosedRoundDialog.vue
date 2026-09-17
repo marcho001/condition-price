@@ -128,9 +128,9 @@
               </el-button>
             </span>
           </el-tooltip>
-          <el-tooltip :content="t('auction.designateDisabled')" :disabled="designatable" placement="top">
+          <el-tooltip :content="t('auction.designateDisabled')" :disabled="canDesignateRound" placement="top">
             <span>
-              <el-button :disabled="!designatable" @click="designateOpen = true">
+              <el-button :disabled="!canDesignateRound" @click="designateOpen = true">
                 {{ t('auction.actionDesignate') }}
               </el-button>
             </span>
@@ -143,10 +143,14 @@
     <!-- 指定成交廠商 -->
     <el-dialog v-model="designateOpen" :title="t('auction.designateTitle')" width="460px" append-to-body>
       <p class="section-hint">{{ t('auction.designateHint') }}</p>
+      <!-- 可選對象＝該輪全部有出價的廠商（含最高價與非最高價）。未出價者不可指定 -->
       <el-radio-group v-model="designatePick" class="designate-list">
-        <el-radio v-for="id in high.dealerIds" :key="id" :value="id" border>
-          {{ dealerById(id)?.name }}
-          <b class="num">{{ yenJa(high.amount) }}</b>
+        <el-radio v-for="b in designatable" :key="b.dealerId" :value="b.dealerId" border>
+          {{ b.dealer?.name }}
+          <el-tag v-if="high.dealerIds.includes(b.dealerId)" size="small" type="success" effect="plain">
+            {{ t('auction.topBid') }}
+          </el-tag>
+          <b class="num">{{ yenJa(b.amount) }}</b>
         </el-radio>
       </el-radio-group>
       <template #footer>
@@ -160,7 +164,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -172,6 +176,7 @@ import {
   highestOfRound,
   canAward,
   canDesignate,
+  designatableBids,
   awardRound,
   designateWinner,
   dealerById
@@ -187,13 +192,18 @@ const { t } = useI18n()
 const designateOpen = ref(false)
 const designatePick = ref('')
 
+watch(designateOpen, (open) => {
+  if (open) designatePick.value = ''
+})
+
 const round = computed(() => (props.roundId ? roundById(props.roundId) : null))
 const vehicle = computed(() => (round.value ? vehicleById(round.value.vehicleId) : null))
 const view = computed(() => vehicleView(vehicle.value))
 const rows = computed(() => (round.value ? rankingOfRound(round.value.id) : []))
 const high = computed(() => (round.value ? highestOfRound(round.value.id) : { amount: null, dealerIds: [] }))
 const awardable = computed(() => (round.value ? canAward(round.value.id) : false))
-const designatable = computed(() => (round.value ? canDesignate(round.value.id) : false))
+const canDesignateRound = computed(() => (round.value ? canDesignate(round.value.id) : false))
+const designatable = computed(() => (round.value ? designatableBids(round.value.id) : []))
 const prevRounds = computed(() =>
   round.value ? roundsOf(round.value.vehicleId).filter((r) => r.round < round.value.round) : []
 )
@@ -227,10 +237,12 @@ async function doAward() {
 }
 
 async function doDesignate() {
-  const winner = dealerById(designatePick.value)
+  const picked = designatable.value.find((b) => b.dealerId === designatePick.value)
+  if (!picked) return
   try {
+    // 成交金額＝該廠商自己的出價金額，內部不可輸入或調整
     await ElMessageBox.confirm(
-      t('auction.awardConfirm', { dealer: winner.name, amount: yenJa(high.value.amount) }),
+      t('auction.awardConfirm', { dealer: picked.dealer?.name, amount: yenJa(picked.amount) }),
       t('auction.actionDesignate'),
       { type: 'warning' }
     )

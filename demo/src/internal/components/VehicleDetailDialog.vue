@@ -4,6 +4,7 @@
     :title="t('vehicle.detailTitle')"
     width="1120px"
     top="6vh"
+    :append-to-body="appendToBody"
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <template #header>
@@ -104,7 +105,11 @@ import { fmtDate, fmtDateTime, yenJa } from '@/shared/format.js'
 
 const props = defineProps({
   modelValue: Boolean,
-  vehicleId: String
+  vehicleId: String,
+  // 「オークション登録」彈窗の「確認詳細」から開いたときは一律唯讀
+  // （送出前の突き合わせ用。修正は一覧の「編集」から）
+  forceReadonly: Boolean,
+  appendToBody: Boolean
 })
 defineEmits(['update:modelValue'])
 
@@ -118,12 +123,15 @@ const round = computed(() => {
 })
 
 // 4.4.3 可編輯期間：待排定拍賣のみ編集可
-const editable = computed(() => vehicle.value?.status === VEHICLE_STATUS.PENDING_SCHEDULE)
-const lockReason = computed(() =>
-  vehicle.value?.status === VEHICLE_STATUS.IN_AUCTION
+const editable = computed(
+  () => !props.forceReadonly && vehicle.value?.status === VEHICLE_STATUS.PENDING_SCHEDULE
+)
+const lockReason = computed(() => {
+  if (props.forceReadonly) return t('schedule.confirmHint')
+  return vehicle.value?.status === VEHICLE_STATUS.IN_AUCTION
     ? t('vehicle.lockedInAuction')
     : t('vehicle.lockedClosed')
-)
+})
 
 // 彈窗顯示格式：第 N 輪・輪次類型
 const roundNTypeLabel = computed(() =>

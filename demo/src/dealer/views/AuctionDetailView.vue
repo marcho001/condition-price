@@ -13,9 +13,14 @@
 
     <div class="cols">
       <div class="main-col">
+        <!-- 写真は詳細ページのみ（カードにはサムネイルを置かない）。
+             0 枚でもブロックは消さず、empty component で「写真はまだありません」と明示する -->
         <section class="block">
           <h2 class="sec">{{ t('detail.photos') }}</h2>
-          <PhotoGallery :photos="photos" />
+          <PhotoGallery v-if="photos.length" :photos="photos" />
+          <div v-else class="card photo-empty">
+            <EmptyState :title="t('detail.noPhoto')" :desc="t('detail.noPhotoDesc')" />
+          </div>
         </section>
 
         <section class="block">
@@ -48,8 +53,9 @@
             <p class="note">{{ t('won.flowNote') }}</p>
           </div>
           <CountdownBoard v-else :round="round" size="lg" />
-          <p class="side-sec eyebrow">{{ t('detail.auctionInfo') }}</p>
-          <dl class="side-spec">
+          <!-- 落札済みから開いたときはオークション情報・あなたの入札を出さない（規格 6.1） -->
+          <p v-if="!myAward" class="side-sec eyebrow">{{ t('detail.auctionInfo') }}</p>
+          <dl v-if="!myAward" class="side-spec">
             <div>
               <dt>{{ t('detail.round') }}</dt>
               <dd>{{ isExtraRound ? t('detail.extraRound') : t('detail.firstRound') }}</dd>
@@ -77,9 +83,19 @@
             <b v-else class="none">{{ t('card.notBidYet') }}</b>
           </div>
 
-          <button v-if="isDesktop && !myAward" class="btn btn-primary btn-block" :disabled="closed" @click="bidOpen = true">
-            {{ closed ? t('detail.closedBtn') : myBid ? t('detail.editBid') : t('detail.bid') }}
-          </button>
+          <template v-if="isDesktop && !myAward">
+            <button class="btn btn-primary btn-block" :disabled="closed" @click="bidOpen = true">
+              {{ closed ? t('detail.closedBtn') : myBid ? t('detail.editBid') : t('detail.bid') }}
+            </button>
+            <!-- 入札ボタンの真下の副ボタン。本ラウンド未入札のときは disabled -->
+            <button
+              class="btn btn-ghost btn-block btn-cancel"
+              :disabled="closed || !myBid"
+              @click="cancelOpen = true"
+            >
+              {{ t('detail.cancelBid') }}
+            </button>
+          </template>
         </div>
       </aside>
     </div>
@@ -100,12 +116,31 @@
           <b class="none">{{ t('card.notBidYet') }}</b>
         </template>
       </div>
-      <button class="btn btn-primary" :disabled="closed" @click="bidOpen = true">
-        {{ closed ? t('detail.closedBtn') : myBid ? t('detail.editBid') : t('detail.bid') }}
-      </button>
+      <div class="sb-btns">
+        <button class="btn btn-primary" :disabled="closed" @click="bidOpen = true">
+          {{ closed ? t('detail.closedBtn') : myBid ? t('detail.editBid') : t('detail.bid') }}
+        </button>
+        <button class="btn btn-ghost btn-cancel" :disabled="closed || !myBid" @click="cancelOpen = true">
+          {{ t('detail.cancelBid') }}
+        </button>
+      </div>
     </div>
 
     <BidSheet :open="bidOpen" :round="round" :car-label="carLabel" @close="bidOpen = false" />
+
+    <!-- 入札取消の二次確認 -->
+    <div v-if="cancelOpen" class="cx-mask" @click.self="cancelOpen = false">
+      <div class="cx card" role="dialog" aria-modal="true">
+        <h3>{{ t('detail.cancelTitle') }}</h3>
+        <p class="cx-car">{{ carLabel }}</p>
+        <p v-if="myBid" class="cx-amount fig">{{ yenJa(myBid.amount) }}</p>
+        <p class="cx-note">{{ t('detail.cancelHint') }}</p>
+        <div class="cx-btns">
+          <button class="btn btn-ghost" @click="cancelOpen = false">{{ t('common.back') }}</button>
+          <button class="btn btn-danger" @click="doCancel">{{ t('detail.cancelSubmit') }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <EmptyState v-else :title="t('list.empty')" :desc="t('list.emptyDesc')" />
@@ -122,21 +157,38 @@ import CountdownBoard from '../components/CountdownBoard.vue'
 import BidSheet from '../components/BidSheet.vue'
 import EmptyState from '../components/EmptyState.vue'
 import { db } from '@/shared/store.js'
-import { roundById, vehicleById, vehicleView, bidOf, roundRemaining, awardOf } from '@/shared/engine.js'
+import {
+  roundById,
+  vehicleById,
+  vehicleView,
+  bidOf,
+  roundRemaining,
+  awardOf,
+  cancelBid,
+  canDealerSeeRound
+} from '@/shared/engine.js'
 import { carPhoto } from '@/shared/photos.js'
+import { toast } from '../toast.js'
 import { fmtDate, fmtDateTime, yenJa } from '@/shared/format.js'
 
 const { t } = useI18n()
 const route = useRoute()
 
 const bidOpen = ref(false)
+const cancelOpen = ref(false)
 const isDesktop = ref(window.matchMedia('(min-width: 980px)').matches)
 const mq = window.matchMedia('(min-width: 980px)')
 const onMq = (e) => (isDesktop.value = e.matches)
 onMounted(() => mq.addEventListener('change', onMq))
 onUnmounted(() => mq.removeEventListener('change', onMq))
 
-const round = computed(() => roundById(route.params.roundId))
+// 追加ラウンドは招待された販売店にしか存在しない。
+// 本来サーバー側が「データなし／権限なし」を返す部分を、デモでは取得時に同じ判定で再現する
+const round = computed(() => {
+  const r = roundById(route.params.roundId)
+  if (!r) return null
+  return canDealerSeeRound(r.id, db.dealerSession) ? r : null
+})
 const vehicle = computed(() => (round.value ? vehicleById(round.value.vehicleId) : null))
 const view = computed(() => vehicleView(vehicle.value))
 const myBid = computed(() => (round.value ? bidOf(round.value.id, db.dealerSession) : null))
@@ -157,6 +209,16 @@ const photos = computed(() =>
     .filter((a) => GALLERY.includes(a.category))
     .map((a) => ({ id: a.id, name: a.name, src: a.dataUrl || carPhoto(a.kind, view.value) }))
 )
+
+function doCancel() {
+  const res = cancelBid(round.value.id, db.dealerSession)
+  cancelOpen.value = false
+  if (!res.ok) {
+    toast(res.error === 'CLOSED' ? t('bid.errClosed') : t('common.sysError'), 'err')
+    return
+  }
+  toast(t('detail.cancelDone'))
+}
 
 const files = computed(() =>
   (vehicle.value?.attachments || [])
@@ -297,5 +359,39 @@ h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: 0.01em; line-
 .sb-info span { font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.08em; }
 .sb-info b { font-size: 17px; font-weight: 600; }
 .sb-info b.none { font-size: 14px; font-weight: 500; color: var(--ink-3); }
-.sticky-bar .btn { flex: 1; }
+.sb-btns { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.sb-btns .btn { width: 100%; }
+
+.photo-empty { padding: 8px 0 18px; }
+
+.btn-cancel { margin-top: 8px; }
+.side-card .btn-cancel { margin-top: 8px; }
+
+/* 入札取消の二次確認 */
+.cx-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 96;
+  background: rgba(12, 15, 18, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.cx { width: 100%; max-width: 380px; padding: 22px 20px 18px; text-align: center; }
+.cx h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.cx-car { margin: 10px 0 0; font-size: 13px; color: var(--ink-3); }
+.cx-amount { margin: 4px 0 0; font-size: 26px; font-weight: 600; color: var(--ink); }
+.cx-note {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  line-height: 1.85;
+  color: var(--ink-2);
+  background: var(--sheet);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  text-align: left;
+}
+.cx-btns { display: flex; gap: 10px; margin-top: 16px; }
+.cx-btns .btn { flex: 1; }
 </style>

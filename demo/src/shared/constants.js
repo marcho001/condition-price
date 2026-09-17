@@ -71,10 +71,17 @@ export const ROUND_TYPE = {
 
 export const roundTypeOf = (round) => (round && round.round > 1 ? ROUND_TYPE.EXTRA : ROUND_TYPE.FIRST)
 
+// 權限 —— 規格第三章：財務人員／催收人員，一個帳號可同時擁有兩者
+// 兩者的差異集中在「拍賣管理」：催收人員看不到「已結標」，
+// 「拍賣進行中」與「已決標」為唯讀（無催投、已決標無操作欄）
 export const ROLE = {
-  OPERATION: 'auction:operation', // 拍賣營運
-  AWARD: 'auction:award' // 決標管理
+  FINANCE: 'auction:finance', // 財務人員
+  COLLECTION: 'auction:collection' // 催收人員
 }
+
+// 列表每頁筆數 —— 本模組全部有分頁的列表一致（規格七、7.2）
+export const PAGE_SIZES = [25, 50, 100]
+export const DEFAULT_PAGE_SIZE = 25
 
 export const COLORS_JA = ['パールホワイト', 'ブラック', 'シルバー', 'ガンメタリック', 'ダークブルー', 'レッド', 'ベージュ']
 export const FUEL_JA = ['ガソリン', 'ハイブリッド', 'ディーゼル']

@@ -31,8 +31,8 @@
             <div class="role-switch">
               <span class="role-label">{{ t('role.label') }}</span>
               <el-checkbox-group v-model="roles" size="small">
-                <el-checkbox-button :value="ROLE.OPERATION">{{ t('role.operation') }}</el-checkbox-button>
-                <el-checkbox-button :value="ROLE.AWARD">{{ t('role.award') }}</el-checkbox-button>
+                <el-checkbox-button :value="ROLE.FINANCE">{{ t('role.finance') }}</el-checkbox-button>
+                <el-checkbox-button :value="ROLE.COLLECTION">{{ t('role.collection') }}</el-checkbox-button>
               </el-checkbox-group>
             </div>
           </el-tooltip>
@@ -87,7 +87,7 @@ const roles = computed({
   get: () => db.internalUser.roles,
   set: (v) => {
     // 少なくとも 1 つの権限は保持する
-    db.internalUser.roles = v.length ? v : [ROLE.OPERATION]
+    db.internalUser.roles = v.length ? v : [ROLE.FINANCE]
   }
 })
 

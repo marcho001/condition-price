@@ -5,7 +5,8 @@ const d = (n) => dayjs().add(n, 'day').format('YYYY-MM-DD')
 const ts = (n, h = 10, m = 20) =>
   dayjs().add(n, 'day').hour(h).minute(m).second(0).millisecond(0).valueOf()
 
-const INTAKE_PHOTOS = [
+// 內部收車後上傳的照片（外觀前／後／左／右、走行距離メーター、座席・エンジン等部位照片）
+const UPLOADED_PHOTOS = [
   ['side', '車両写真_サイド.jpg', 'CAR_PHOTO'],
   ['front', '車両写真_フロント.jpg', 'CAR_PHOTO'],
   ['rear', '車両写真_リア.jpg', 'CAR_PHOTO'],
@@ -21,16 +22,20 @@ const INTAKE_PHOTOS = [
   ['engine', 'エンジン写真.jpg', 'PART']
 ]
 
-function attachments(id, { condition = false, rating = false } = {}) {
-  const list = INTAKE_PHOTOS.map(([kind, name, category], i) => ({
+// 附件不從進件資料帶入 —— 車輛進入「車輛管理」時附件為空，
+// 全部附件（含車輛照片）一律由內部於「車輛詳細」彈窗自行上傳。
+// none: true 代表一張都沒上傳，用來看對外站詳細頁的「尚無照片」empty component
+function attachments(id, { condition = false, rating = false, none = false } = {}) {
+  if (none) return []
+  const list = UPLOADED_PHOTOS.map(([kind, name, category], i) => ({
     id: `${id}-a${i}`,
     name,
     kind,
     category,
     mime: 'image/jpeg',
-    source: 'intake',
-    uploader: 'システム（申込時）',
-    uploadedAt: ts(-40, 9, 0)
+    source: 'module',
+    uploader: '田中 健一',
+    uploadedAt: ts(-8, 10, 0)
   }))
   if (condition) {
     list.push({
@@ -425,7 +430,7 @@ export function buildSeed() {
       guidePrice: '1,050,000 〜 1,300,000',
       valuationPrice: '1,170,000',
       current: { mileage: 18200 },
-      files: {}
+      files: { none: true }
     }),
 
     // ── 已結標 ─────────────────────────────────
@@ -626,13 +631,14 @@ export function buildSeed() {
       id: 'R2594-1',
       vehicleId: 'V2594',
       round: 1,
-      startDate: d(-4),
-      endDate: d(1),
+      // アルファード（R2591-1）と同じバッチで登録された想定 —— 期間は 1 バッチ共通
+      startDate: d(-3),
+      endDate: d(2),
       startPrice: 0,
       inviteeIds: [...allIds],
       status: 'OPEN',
       createdBy: '田中 健一',
-      createdAt: ts(-4, 9, 30),
+      createdAt: ts(-3, 9, 30),
       urgeLogs: [],
       autoUrgeSent: false
     },
@@ -832,27 +838,33 @@ export function buildSeed() {
     }
   ]
 
-  const n = (id, dealerId, type, vehicleId, roundId, at, read) => ({
+  // 通知類型（五類）於發送當下寫入該筆通知，對外站據此篩選與決定轉跳目標
+  const n = (id, dealerId, type, vehicleId, roundId, at, read, extra = {}) => ({
     id,
     dealerId,
     type,
     vehicleId,
     roundId,
     at,
-    read
+    read,
+    ...extra
   })
 
+  // 上架通知為「一次批次一封」，信中以清單列出本批全部車輛（不帶 OrderNo、不帶起標價）
+  const batch = (ids, endDate) => ({ vehicleIds: ids, count: ids.length, endDate })
+  const batchA = batch(['V2591', 'V2594'], d(2))
+  const batchB = batch(['V2592'], d(0))
+
   const notifications = [
-    n('N01', 'DL01', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), true),
-    n('N02', 'DL02', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), true),
-    n('N03', 'DL03', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), false),
-    n('N04', 'DL04', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), false),
-    n('N05', 'DL01', NOTICE_TYPE.NEW_AUCTION, 'V2592', 'R2592-1', ts(-5, 9, 31), true),
+    n('N01', 'DL01', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), true, batchA),
+    n('N02', 'DL02', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), true, batchA),
+    n('N03', 'DL03', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), false, batchA),
+    n('N04', 'DL04', NOTICE_TYPE.NEW_AUCTION, 'V2591', 'R2591-1', ts(-3, 9, 31), false, batchA),
+    n('N05', 'DL01', NOTICE_TYPE.NEW_AUCTION, 'V2592', 'R2592-1', ts(-5, 9, 31), true, batchB),
     n('N06', 'DL01', NOTICE_TYPE.CLOSING_SOON, 'V2592', 'R2592-1', ts(-2, 9, 0), false),
     n('N07', 'DL01', NOTICE_TYPE.EXTRA_ROUND_INVITE, 'V2593', 'R2593-2', ts(-4, 15, 11), false),
     n('N08', 'DL02', NOTICE_TYPE.EXTRA_ROUND_INVITE, 'V2593', 'R2593-2', ts(-4, 15, 11), false),
     n('N09', 'DL03', NOTICE_TYPE.EXTRA_ROUND_INVITE, 'V2593', 'R2593-2', ts(-4, 15, 11), false),
-    n('N10', 'DL01', NOTICE_TYPE.NEW_AUCTION, 'V2594', 'R2594-1', ts(-4, 9, 31), false),
     n('N11', 'DL01', NOTICE_TYPE.WON, 'V2578', 'R2578-1', ts(-12, 10, 31), true),
     n('N12', 'DL02', NOTICE_TYPE.LOST, 'V2578', 'R2578-1', ts(-12, 10, 31), false),
     n('N13', 'DL01', NOTICE_TYPE.LOST, 'V2579', 'R2579-1', ts(-13, 14, 6), true),
@@ -877,7 +889,7 @@ export function buildSeed() {
     timeOffset: 0,
     // Demo 用開關：開啟後成交通知呼叫失敗，可觀察「留在已結標」的行為
     demo: { dealApiFail: false },
-    internalUser: { name: '田中 健一', roles: ['auction:operation', 'auction:award'] },
+    internalUser: { name: '田中 健一', roles: ['auction:finance', 'auction:collection'] },
     dealerSession: null
   }
 }

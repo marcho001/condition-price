@@ -176,12 +176,3 @@ export function carPhoto(kind, vehicle) {
       return shell(sideView(color) + caption(name, ''))
   }
 }
-
-export function placeholderPhoto() {
-  return shell(
-    `<g font-family="${JP_FONT}" text-anchor="middle">
-      <rect x="286" y="238" width="228" height="126" rx="14" fill="none" stroke="#b9c1ba" stroke-width="3" stroke-dasharray="9 8"/>
-      <text x="400" y="312" font-size="22" fill="#8e988f">画像なし</text>
-    </g>`
-  )
-}

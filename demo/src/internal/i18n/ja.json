@@ -12,9 +12,9 @@
   },
   "role": {
     "label": "権限",
-    "operation": "オークション運用",
-    "award": "落札管理",
-    "hint": "デモ用の権限切替。落札管理を外すと「締切済み」「落札済み」タブが非表示になります。"
+    "hint": "デモ用の権限切替。督促担当のみにすると「締切済み」タブが消え、「進行中」の催促ボタンと「落札済み」の操作欄も非表示になります（閲覧のみ）。",
+    "finance": "財務担当",
+    "collection": "督促担当"
   },
   "common": {
     "search": "検索",
@@ -68,11 +68,14 @@
     "historyOperator": "操作者",
     "historyAt": "更新日時",
     "attachUpload": "ファイルを追加",
-    "attachHint": "jpg / jpeg / png / pdf に対応。ここに追加したファイルは対外サイトにも表示されます。",
-    "attachSourceIntake": "申込時",
-    "attachSourceModule": "本モジュール",
+    "attachHint": "jpg / jpeg / png / pdf に対応。添付は申込データからは引き継がれません —— ここに追加したファイルがそのまま対外サイトに表示されます。",
+    "attachSourceModule": "本モジュールでアップロード",
     "attachDeleteConfirm": "「{name}」を削除します。よろしいですか？",
-    "attachExcluded": "車検証・自動車保険証券・運転免許証・個人情報関連の添付は対外サイトに表示されません（本モジュールでも取り扱いません）。"
+    "attachExcluded": "車検証・自動車保険証券・運転免許証・個人情報関連の添付は対外サイトに表示されません（本モジュールでも取り扱いません）。",
+    "pickedCount": "{n} 台を選択中",
+    "clearPick": "選択を解除",
+    "needMileage": "走行距離 未入力",
+    "attachEmpty": "添付ファイルはありません"
   },
   "schedule": {
     "title": "オークション登録",
@@ -85,9 +88,22 @@
     "round": "ラウンド",
     "startPrice": "開始価格",
     "firstRound": "初回ラウンド（全販売店に公開・開始価格 0 円）",
-    "done": "オークションを登録しました。対外サイトに公開され、全販売店へ通知を送信しました。",
+    "done": "{n} 台を一括登録しました。対外サイトに公開され、全販売店へ 1 通の通知を送信しました。",
     "errStart": "開始日は本日以降を指定してください",
-    "errEnd": "終了日は開始日より後を指定してください"
+    "errEnd": "終了日は開始日より後を指定してください",
+    "batchHint": "選択した {n} 台を同じオークション期間で一括登録します。期間はバッチ共通です。",
+    "count": "出品台数",
+    "countUnit": "{n} 台",
+    "confirmList": "出品車両一覧",
+    "confirmAsk": "選択した車両をオークションに出品します。よろしいですか？",
+    "checkDetail": "詳細を確認",
+    "batchFailed": "検証に通らない車両があるため、今回のバッチは 1 台も登録されていません。",
+    "rejectedTitle": "一括登録できません（全件成功か全件失敗のいずれかです）",
+    "reject": {
+      "NOT_FOUND": "車両が見つかりません",
+      "STATUS_CHANGED": "すでにオークションに登録済みです",
+      "MILEAGE_REQUIRED": "走行距離（実測値）が未入力です"
+    }
   },
   "auction": {
     "title": "オークション管理",
@@ -135,12 +151,12 @@
     "actionExtraRound": "追加ラウンドへ",
     "awardDisabledNoBid": "入札がないため落札決定できません",
     "awardDisabledTie": "最高額が同額のため落札決定できません。指定成約または追加ラウンドで対応してください。",
-    "designateDisabled": "最高額の同額が発生していないため使用できません",
+    "designateDisabled": "このラウンドは入札がないため使用できません",
     "awardConfirm": "{dealer} に {amount} で落札決定します。よろしいですか？",
     "awardDone": "落札を決定しました。落札・非落札の通知を送信しました。",
     "awardFailed": "落札処理を完了できませんでした。基幹システムと通信できないため、この案件は「締切済み」のままです。しばらくしてから再度お試しください。",
     "designateTitle": "成約販売店を指定",
-    "designateHint": "最高額が同額の販売店から 1 社を選びます。成約金額はその販売店の入札額（変更不可）です。",
+    "designateHint": "このラウンドで入札のあった販売店から 1 社を選びます（最高額でなくても構いません）。成約金額はその販売店の入札額で、変更できません。",
     "extraTitle": "追加ラウンドの設定",
     "extraStartPrice": "開始価格（前ラウンドの最高入札額）",
     "extraStartPriceZero": "前ラウンドは入札がなかったため、開始価格は 0 円です。",
@@ -156,7 +172,8 @@
     "methodDesignate": "指定成約",
     "awardedAt": "決定日時／操作者",
     "roundHistory": "ラウンド履歴",
-    "settledNote": "入金・名義変更の完了後、基幹システムからの完済通知により本一覧から除外されます。"
+    "settledNote": "入金・名義変更の完了後、基幹システムからの完済通知により本一覧から除外されます。",
+    "topBid": "最高額"
   },
   "dealer": {
     "title": "販売店管理",
@@ -192,7 +209,11 @@
     "lockNote": "ロックは対外サイトのログイン 5 回連続失敗でシステムが自動的に行います（社内から手動ロックはできません）。自動解除はありません。",
     "loginId": "ログイン ID",
     "password": "PW（デモ）",
-    "failCount": "失敗 {n} 回"
+    "failCount": "失敗 {n} 回",
+    "emailTaken": "ほかの販売店のログイン ID と重複しています",
+    "loginIdChangeHint": "編集すると対外サイトのログイン ID が変わります（旧 Email は即時に使用できなくなります）。",
+    "loginIdChangeTitle": "ログイン ID の変更",
+    "loginIdChangeConfirm": "ログイン ID を {before} から {after} に変更します。旧 Email ではログインできなくなります。パスワードは変更されません（ロック状態も解除されません）。よろしいですか？"
   },
   "demo": {
     "title": "デモ操作",

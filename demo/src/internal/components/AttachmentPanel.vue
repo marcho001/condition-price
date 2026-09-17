@@ -15,14 +15,12 @@
         </div>
         <div class="meta">
           <p class="name" :title="a.name">{{ a.name }}</p>
-          <p class="sub">
-            {{ a.source === 'intake' ? t('vehicle.attachSourceIntake') : t('vehicle.attachSourceModule') }}
-            ・{{ a.uploader }}
-          </p>
+          <!-- 附件不從進件帶入，一律為本模組上傳 -->
+          <p class="sub">{{ t('vehicle.attachSourceModule') }}・{{ a.uploader }}</p>
           <p class="sub">{{ fmtDateTime(a.uploadedAt) }}</p>
         </div>
         <el-button
-          v-if="editable && a.source === 'module'"
+          v-if="editable"
           class="del"
           link
           type="danger"
@@ -31,6 +29,10 @@
         >
           {{ t('common.delete') }}
         </el-button>
+      </div>
+
+      <div v-if="!list.length && !editable" class="attach-empty">
+        <el-empty :description="t('vehicle.attachEmpty')" :image-size="70" />
       </div>
 
       <label v-if="editable" class="attach-card upload">
@@ -114,6 +116,7 @@ function onPick(e) {
 </script>
 
 <style lang="scss" scoped>
+.attach-empty { grid-column: 1 / -1; }
 .count {
   font-size: 13px;
   font-weight: 400;

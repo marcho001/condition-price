@@ -94,7 +94,8 @@ export const activeDealers = () => db.dealers.filter((x) => x.status === 'ACTIVE
 // ── 通知 ─────────────────────────────────────────────
 // 停用中の販売店には拍賣通知を送らない（催促も含む）。
 // 既に送信済みの入札は順位に残るため、通知の停止のみが停用の効果。
-function notify(dealerIds, type, vehicleId, roundId) {
+// 通知類型（五類）於發送當下寫入該筆通知 —— 對外站的類型篩選與轉跳目標皆以此為準
+function notify(dealerIds, type, vehicleId, roundId, extra = {}) {
   dealerIds.filter((id) => dealerById(id)?.status === 'ACTIVE').forEach((dealerId) => {
     db.notifications.push({
       id: uid('N'),
@@ -103,7 +104,8 @@ function notify(dealerIds, type, vehicleId, roundId) {
       vehicleId,
       roundId,
       at: serverNow.value,
-      read: false
+      read: false,
+      ...extra
     })
   })
 }
@@ -134,6 +136,14 @@ export const unreadCountOf = (dealerId) =>
 export function markNoticeRead(id) {
   const n = db.notifications.find((x) => x.id === id)
   if (n) n.read = true
+}
+
+// 勾選多筆刪除：僅刪除該廠商自己的站內通知，不影響其他廠商與已寄出的 Email / SMS。不可復原
+export function deleteNotices(ids, dealerId) {
+  const set = new Set(ids)
+  const before = db.notifications.length
+  db.notifications = db.notifications.filter((n) => !(set.has(n.id) && n.dealerId === dealerId))
+  return before - db.notifications.length
 }
 
 // ── 稽核 ─────────────────────────────────────────────
@@ -186,31 +196,72 @@ function autoUrgeAt(endDate) {
   return dayjs(endDate).subtract(2, 'day').hour(9).minute(0).second(0).millisecond(0).valueOf()
 }
 
-export function scheduleAuction(vehicleId, { startDate, endDate }, operator) {
-  const v = vehicleById(vehicleId)
-  if (!v || !canSchedule(v)) return { ok: false, error: 'MILEAGE_REQUIRED' }
+// 排定拍賣為批次操作：勾選的 orderNo 以陣列傳入、只打一支 API、全有或全無。
+// 後端收到後就陣列內全部車輛重新檢核（走行距離已填、狀態仍為待排定拍賣），
+// 任一筆不通過即整批都不上架，並明確指出是哪幾筆、原因為何。
+export function scheduleAuctionBatch(orderNos, { startDate, endDate }, operator) {
+  const list = [...new Set(orderNos)]
+  if (!list.length) return { ok: false, error: 'EMPTY', rejected: [] }
+
+  const rejected = []
+  const targets = []
+  list.forEach((orderNo) => {
+    const v = db.vehicles.find((x) => x.orderNo === orderNo)
+    if (!v) {
+      rejected.push({ orderNo, reason: 'NOT_FOUND' })
+      return
+    }
+    if (v.status !== VEHICLE_STATUS.PENDING_SCHEDULE) {
+      rejected.push({ orderNo, reason: 'STATUS_CHANGED' })
+      return
+    }
+    if (!canSchedule(v)) {
+      rejected.push({ orderNo, reason: 'MILEAGE_REQUIRED' })
+      return
+    }
+    targets.push(v)
+  })
+  // 全有或全無 —— 任一筆檢核不通過即整批都不上架
+  if (rejected.length) return { ok: false, error: 'VALIDATION_FAILED', rejected }
+
   const invitees = activeDealers().map((x) => x.id)
   const now = serverNow.value
-  const round = {
-    id: uid('R'),
-    vehicleId,
-    round: 1,
+  const rounds = targets.map((v) => {
+    const round = {
+      id: uid('R'),
+      vehicleId: v.id,
+      round: 1,
+      startDate,
+      endDate,
+      startPrice: 0,
+      // 首輪邀請對象為全體廠商，不需勾選
+      inviteeIds: invitees,
+      status: 'OPEN',
+      createdBy: operator,
+      createdAt: now,
+      urgeLogs: [],
+      // 排定當下距結標已不足 2 天時，不再自動催投
+      autoUrgeSent: autoUrgeAt(endDate) <= now
+    }
+    db.rounds.push(round)
+    v.status = VEHICLE_STATUS.IN_AUCTION
+    return round
+  })
+
+  // 上架通知：一次批次只發一封，信中以清單列出本批全部車輛（不帶 OrderNo、不帶起標價）
+  notify(invitees, NOTICE_TYPE.NEW_AUCTION, targets[0].id, rounds[0].id, {
+    vehicleIds: targets.map((v) => v.id),
+    count: targets.length,
+    endDate
+  })
+  audit('auction.schedule', {
+    orderNos: targets.map((v) => v.orderNo),
+    roundIds: rounds.map((r) => r.id),
     startDate,
     endDate,
-    startPrice: 0,
-    inviteeIds: invitees,
-    status: 'OPEN',
-    createdBy: operator,
-    createdAt: now,
-    urgeLogs: [],
-    // 排定當下距結標已不足 2 天時，不再自動催投
-    autoUrgeSent: autoUrgeAt(endDate) <= now
-  }
-  db.rounds.push(round)
-  v.status = VEHICLE_STATUS.IN_AUCTION
-  notify(invitees, NOTICE_TYPE.NEW_AUCTION, vehicleId, round.id)
-  audit('auction.schedule', { vehicleId, roundId: round.id, operator })
-  return { ok: true, round }
+    operator
+  })
+  return { ok: true, rounds, rejected: [] }
 }
 
 export function startExtraRound(vehicleId, { startDate, endDate, inviteeIds }, operator) {
@@ -294,15 +345,39 @@ export function placeBid(roundId, dealerId, amount) {
   return { ok: true }
 }
 
+// 放棄出價：截止前將本輪出價初始化回「未出價」，不論中途是否修改過金額一律清除。
+// 截止前仍可重新出價，下限與一般出價相同（放棄不會改變該輪的起標價）。
+export function cancelBid(roundId, dealerId) {
+  const round = roundById(roundId)
+  if (!round) return { ok: false, error: 'NOT_FOUND' }
+  if (round.status !== 'OPEN' || roundRemaining(round) <= 0) return { ok: false, error: 'CLOSED' }
+  if (!round.inviteeIds.includes(dealerId)) return { ok: false, error: 'NOT_ELIGIBLE' }
+  const i = db.bids.findIndex((b) => b.roundId === roundId && b.dealerId === dealerId)
+  if (i < 0) return { ok: false, error: 'NO_BID' }
+  const cleared = db.bids[i].amount
+  db.bids.splice(i, 1)
+  // 稽核留存放棄的時間與被清除的金額
+  audit('bid.cancel', { roundId, dealerId, clearedAmount: cleared })
+  return { ok: true, clearedAmount: cleared }
+}
+
 // ── 決標 ─────────────────────────────────────────────
 export function canAward(roundId) {
   const high = highestOfRound(roundId)
   return high.amount !== null && high.dealerIds.length === 1
 }
 
+// 指定成交廠商：**只要該輪有任一廠商出價即可使用**（不再限同價）。
+// 可選對象為該輪全部有出價的廠商，成交金額等於該廠商自己的出價金額。
 export function canDesignate(roundId) {
-  const high = highestOfRound(roundId)
-  return high.amount !== null && high.dealerIds.length > 1
+  return bidsOfRound(roundId).length > 0
+}
+
+// 可指定的對象（含最高價與非最高價），依金額高到低
+export function designatableBids(roundId) {
+  return bidsOfRound(roundId)
+    .map((b) => ({ dealerId: b.dealerId, dealer: dealerById(b.dealerId), amount: b.amount, at: b.at }))
+    .sort((a, b) => b.amount - a.amount)
 }
 
 // 成交通知（拍賣 → 貸後）：三支介接 API 中唯一由本模組主動發出的一支。
@@ -363,10 +438,10 @@ export function awardRound(vehicleId, roundId, operator) {
 }
 
 export function designateWinner(vehicleId, roundId, dealerId, operator) {
-  const high = highestOfRound(roundId)
-  if (!canDesignate(roundId) || !high.dealerIds.includes(dealerId))
-    return { ok: false, error: 'NOT_ALLOWED' }
-  const ok = finishAward(vehicleId, roundId, dealerId, high.amount, AWARD_METHOD.DESIGNATE, operator)
+  // 未出價的廠商不可指定；成交金額等於該廠商自己的出價金額，內部不可輸入或調整
+  const bid = bidOf(roundId, dealerId)
+  if (!canDesignate(roundId) || !bid) return { ok: false, error: 'NOT_ALLOWED' }
+  const ok = finishAward(vehicleId, roundId, dealerId, bid.amount, AWARD_METHOD.DESIGNATE, operator)
   return ok ? { ok: true } : { ok: false, error: 'DEAL_API_FAILED' }
 }
 
@@ -455,8 +530,18 @@ export const settleableOrders = () =>
 // ── 廠商管理 ──────────────────────────────────────────
 export const LOGIN_FAIL_LIMIT = 5
 
+// 密碼一律由本模組產生：a-zA-Z0-9 隨機 8 碼（不含符號），每次重新隨機取值
+const PASSWORD_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 function genPassword() {
-  return `xs${Math.random().toString(36).slice(2, 8)}`
+  return Array.from({ length: 8 }, () =>
+    PASSWORD_CHARS[Math.floor(Math.random() * PASSWORD_CHARS.length)]
+  ).join('')
+}
+
+// 登入帳號不可與其他廠商重複（含已停用的廠商）
+export function isLoginIdTaken(email, exceptId) {
+  const key = String(email || '').trim().toLowerCase()
+  return db.dealers.some((d) => d.id !== exceptId && d.email.toLowerCase() === key)
 }
 
 export function addDealer(payload, operator) {
@@ -479,6 +564,11 @@ export function addDealer(payload, operator) {
 export function updateDealer(id, patch, operator) {
   const d = dealerById(id)
   if (!d) return
+  // 登入帳號（Email）變更：新 Email 即刻生效、舊 Email 立即失效；
+  // 密碼不變、鎖定狀態與登入錯誤次數也不歸零（解鎖是獨立操作）。稽核留存前後值
+  if (patch.email && patch.email !== d.email) {
+    audit('dealer.loginIdChange', { dealerId: id, before: d.email, after: patch.email, operator })
+  }
   Object.assign(d, patch)
   audit('dealer.update', { dealerId: id, operator })
 }
@@ -550,6 +640,14 @@ export function runScheduler() {
 }
 
 // ── 對外站可見範圍 ────────────────────────────────────
+// 該輪的可見資格一律以「該輪的邀請名單」判定（非廠商主檔）。
+// 詳細頁相關的全部取數都要先過這一關，未具資格者一律回「查無資料／無權限」。
+export function canDealerSeeRound(roundId, dealerId) {
+  const round = roundById(roundId)
+  if (!round || !dealerId) return false
+  return round.inviteeIds.includes(dealerId)
+}
+
 export function dealerOpenAuctions(dealerId) {
   return db.rounds
     .filter((r) => r.status === 'OPEN' && r.inviteeIds.includes(dealerId))

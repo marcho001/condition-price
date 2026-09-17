@@ -37,13 +37,34 @@
     </div>
 
     <div class="table-section">
-      <div class="card-title">{{ t('vehicle.title') }}</div>
-      <el-table :data="paged" stripe>
+      <!-- 「オークション登録」は一括操作。ボタンは行ではなく一覧の上に置く -->
+      <div class="flex-space-between mb-16">
+        <div class="card-title" style="margin: 0">{{ t('vehicle.title') }}</div>
+        <div class="batch-bar">
+          <span v-if="picked.length" class="picked-count">
+            {{ t('vehicle.pickedCount', { n: picked.length }) }}
+          </span>
+          <!-- 1 台以上選択したときだけ現れる -->
+          <el-button v-if="picked.length" @click="clearPicked">{{ t('vehicle.clearPick') }}</el-button>
+          <el-button type="primary" :disabled="!picked.length" @click="scheduleOpen = true">
+            {{ t('vehicle.actionSchedule') }}
+          </el-button>
+        </div>
+      </div>
+
+      <el-table ref="tableRef" :data="paged" stripe row-key="orderNo" @selection-change="onSelect">
+        <!-- 必須項目が未入力の車両は選択できない（走行距離） -->
+        <el-table-column type="selection" width="48" :selectable="canSchedule" reserve-selection />
         <el-table-column :label="t('vehicle.orderNo')" min-width="170">
           <template #default="{ row }">
             <el-link type="primary" :underline="false" @click="openDetail(row.id)">
               {{ row.orderNo }}
             </el-link>
+            <el-tooltip v-if="!canSchedule(row)" :content="t('vehicle.mileageRequired')" placement="top">
+              <el-tag type="warning" size="small" effect="plain" class="need-tag">
+                {{ t('vehicle.needMileage') }}
+              </el-tag>
+            </el-tooltip>
           </template>
         </el-table-column>
         <el-table-column :label="t('vehicle.plate')" min-width="150">
@@ -64,22 +85,12 @@
         <el-table-column :label="t('vehicle.receivedAt')" width="120">
           <template #default="{ row }"><span class="num">{{ fmtDate(row.receivedAt) }}</span></template>
         </el-table-column>
-        <el-table-column
-          :label="t('common.operation')"
-          :width="locale === 'ja' ? 230 : 190"
-          fixed="right"
-        >
+        <!-- 操作欄は「編集」のみ -->
+        <el-table-column :label="t('common.operation')" width="110" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openDetail(row.id)">
               {{ t('vehicle.actionEdit') }}
             </el-button>
-            <el-tooltip :content="t('vehicle.mileageRequired')" :disabled="canSchedule(row)" placement="top">
-              <span>
-                <el-button link type="primary" :disabled="!canSchedule(row)" @click="openSchedule(row.id)">
-                  {{ t('vehicle.actionSchedule') }}
-                </el-button>
-              </span>
-            </el-tooltip>
           </template>
         </el-table-column>
         <template #empty>
@@ -89,15 +100,18 @@
 
       <el-pagination
         v-model:current-page="page"
-        :page-size="pageSize"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
         :total="filtered.length"
         background
-        layout="total, prev, pager, next"
+        layout="total, sizes, prev, pager, next"
+        @current-change="clearPicked"
+        @size-change="clearPicked"
       />
     </div>
 
     <VehicleDetailDialog v-model="detailOpen" :vehicle-id="activeId" />
-    <ScheduleDialog v-model="scheduleOpen" :vehicle-id="activeId" @done="page = 1" />
+    <ScheduleDialog v-model="scheduleOpen" :order-nos="picked" @done="afterSchedule" />
   </div>
 </template>
 
@@ -109,10 +123,10 @@ import VehicleDetailDialog from '../components/VehicleDetailDialog.vue'
 import ScheduleDialog from '../components/ScheduleDialog.vue'
 import { db } from '@/shared/store.js'
 import { vehicleView, canSchedule } from '@/shared/engine.js'
-import { VEHICLE_STATUS } from '@/shared/constants.js'
+import { VEHICLE_STATUS, PAGE_SIZES, DEFAULT_PAGE_SIZE } from '@/shared/constants.js'
 import { fmtDate } from '@/shared/format.js'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const blank = () => ({
   orderNo: '',
@@ -122,7 +136,11 @@ const blank = () => ({
 const filter = reactive(blank())
 const applied = ref(blank())
 const page = ref(1)
-const pageSize = 10
+const pageSize = ref(DEFAULT_PAGE_SIZE)
+
+const tableRef = ref()
+// 選択中の orderNo。送出時は orderNo の配列を単一 API に渡す（全件成功か全件失敗か）
+const picked = ref([])
 
 const detailOpen = ref(false)
 const scheduleOpen = ref(false)
@@ -149,11 +167,25 @@ const filtered = computed(() => {
   })
 })
 
-const paged = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+const paged = computed(() =>
+  filtered.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value)
+)
+
+function onSelect(rows_) {
+  picked.value = rows_.map((r) => r.orderNo)
+}
+
+// ページ切替・表示件数変更・絞り込みの適用・再読み込みでは選択を一律クリアする
+// （画面に見えていない車両を送ってしまうのを防ぐため）
+function clearPicked() {
+  picked.value = []
+  tableRef.value?.clearSelection()
+}
 
 function apply() {
   applied.value = { ...filter }
   page.value = 1
+  clearPicked()
 }
 function reset() {
   Object.assign(filter, blank())
@@ -163,9 +195,9 @@ function openDetail(id) {
   activeId.value = id
   detailOpen.value = true
 }
-function openSchedule(id) {
-  activeId.value = id
-  scheduleOpen.value = true
+function afterSchedule() {
+  page.value = 1
+  clearPicked()
 }
 </script>
 
@@ -179,4 +211,11 @@ function openSchedule(id) {
   :deep(.el-button) { flex: 1; margin: 0; }
 }
 .sub { font-size: 12px; line-height: 18px; }
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.picked-count { font-size: 13px; color: var(--el-color-primary); }
+.need-tag { margin-left: 8px; }
 </style>

@@ -3,8 +3,9 @@
     <div class="tab-filter-section">
       <el-tabs v-model="tab" class="no-border" @tab-change="onTabChange">
         <el-tab-pane :label="t('auction.tabOpen')" name="open" />
-        <el-tab-pane v-if="canAwardRole" :label="t('auction.tabClosed')" name="closed" />
-        <el-tab-pane v-if="canAwardRole" :label="t('auction.tabAwarded')" name="awarded" />
+        <!-- 「締切済み」は各社の入札金額と落札操作を含むため財務人員のみ（disable ではなく非表示） -->
+        <el-tab-pane v-if="isFinance" :label="t('auction.tabClosed')" name="closed" />
+        <el-tab-pane :label="t('auction.tabAwarded')" name="awarded" />
       </el-tabs>
 
       <el-form label-position="top" class="filter-form">
@@ -97,12 +98,17 @@
             <span class="count-chip num">{{ t('auction.bidderCountUnit', { n: row.bidCount }) }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('common.operation')" :width="locale === 'ja' ? 230 : 190" fixed="right">
+        <el-table-column
+          :label="t('common.operation')"
+          :width="isFinance ? (locale === 'ja' ? 230 : 190) : 120"
+          fixed="right"
+        >
           <template #default="{ row }">
             <el-button link type="primary" @click="openVehicle(row.vehicle.id)">
               {{ t('vehicle.actionDetail') }}
             </el-button>
-            <el-button link type="primary" @click="openUrge(row.round.id)">
+            <!-- 催收人員は閲覧のみ —— 「催促」ボタンは表示しない -->
+            <el-button v-if="isFinance" link type="primary" @click="openUrge(row.round.id)">
               {{ t('auction.actionUrge') }}
             </el-button>
           </template>
@@ -163,9 +169,10 @@
       <el-table v-else :data="paged" stripe>
         <el-table-column :label="t('vehicle.orderNo')" min-width="180">
           <template #default="{ row }">
-            <el-link type="primary" :underline="false" @click="openAwarded(row.vehicle.id)">
+            <el-link v-if="isFinance" type="primary" :underline="false" @click="openAwarded(row.vehicle.id)">
               {{ row.vehicle.orderNo }}
             </el-link>
+            <span v-else class="num">{{ row.vehicle.orderNo }}</span>
           </template>
         </el-table-column>
         <el-table-column :label="t('auction.vehicleInfo')" min-width="190">
@@ -201,8 +208,9 @@
             <div class="text-muted sub">{{ row.award.operator }}</div>
           </template>
         </el-table-column>
-        <!-- 本 tab 不提供標記結案的按鈕 —— 結案由貸後呼叫[結清通知]觸發 -->
-        <el-table-column :label="t('common.operation')" width="120" fixed="right">
+        <!-- 本 tab 不提供標記結案的按鈕 —— 結案由貸後呼叫[結清通知]觸發。
+             催收人員は「操作」欄そのものを表示しない（＝詳細彈窗を開けない） -->
+        <el-table-column v-if="isFinance" :label="t('common.operation')" width="120" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openAwarded(row.vehicle.id)">{{ t('common.detail') }}</el-button>
           </template>
@@ -215,10 +223,11 @@
 
       <el-pagination
         v-model:current-page="page"
-        :page-size="pageSize"
+        v-model:page-size="pageSize"
+        :page-sizes="PAGE_SIZES"
         :total="filtered.length"
         background
-        layout="total, prev, pager, next"
+        layout="total, sizes, prev, pager, next"
       />
     </div>
 
@@ -261,7 +270,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import dayjs from 'dayjs'
 import { ElMessage } from 'element-plus'
@@ -280,7 +289,14 @@ import {
   unbidInvitees,
   sendUrge
 } from '@/shared/engine.js'
-import { ROLE, ROUND_TYPE, VEHICLE_STATUS, roundTypeOf } from '@/shared/constants.js'
+import {
+  ROLE,
+  ROUND_TYPE,
+  VEHICLE_STATUS,
+  PAGE_SIZES,
+  DEFAULT_PAGE_SIZE,
+  roundTypeOf
+} from '@/shared/constants.js'
 import { fmtDate, fmtDateTime, yenJa, km } from '@/shared/format.js'
 
 const { t, locale } = useI18n()
@@ -289,14 +305,24 @@ const { t, locale } = useI18n()
 const roundTypeLabel = (round) =>
   roundTypeOf(round) === ROUND_TYPE.EXTRA ? t('auction.extraRound') : t('auction.firstRound')
 
-const canAwardRole = computed(() => db.internalUser.roles.includes(ROLE.AWARD))
+// 兩個角色的差異集中在「拍賣管理」：
+// 財務人員＝三個 tab 完整功能；催收人員＝進行中／已決標兩個 tab，且皆為唯讀
+const isFinance = computed(() => db.internalUser.roles.includes(ROLE.FINANCE))
 const tab = ref('open')
+
+// 権限が外れた状態で「締切済み」に留まらないようにする
+watch(isFinance, (ok) => {
+  if (!ok && tab.value === 'closed') {
+    tab.value = 'open'
+    reset()
+  }
+})
 
 const blank = () => ({ orderNo: '', plate: '', roundType: '', period: null, dealerIds: [] })
 const filter = reactive(blank())
 const applied = ref(blank())
 const page = ref(1)
-const pageSize = 10
+const pageSize = ref(DEFAULT_PAGE_SIZE)
 
 const vehicleOpen = ref(false)
 const closedOpen = ref(false)
@@ -364,7 +390,9 @@ const filtered = computed(() => {
   })
 })
 
-const paged = computed(() => filtered.value.slice((page.value - 1) * pageSize, page.value * pageSize))
+const paged = computed(() =>
+  filtered.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value)
+)
 
 const urgeRound = computed(() => (activeRoundId.value ? roundById(activeRoundId.value) : null))
 const urgeTargets = computed(() => (activeRoundId.value ? unbidInvitees(activeRoundId.value) : []))

@@ -12,9 +12,9 @@
   },
   "role": {
     "label": "權限",
-    "operation": "拍賣營運",
-    "award": "決標管理",
-    "hint": "Demo 用的權限切換。取消「決標管理」後，「已結標」「已決標」兩個 tab 會隱藏。"
+    "hint": "Demo 用權限切換。只留催收人員時，「已結標」tab 會消失，「拍賣進行中」的催投按鈕與「已決標」的操作欄也不呈現（唯讀）。",
+    "finance": "財務人員",
+    "collection": "催收人員"
   },
   "common": {
     "search": "查詢",
@@ -68,11 +68,14 @@
     "historyOperator": "操作人",
     "historyAt": "時間",
     "attachUpload": "新增附件",
-    "attachHint": "支援 jpg / jpeg / png / pdf。此處新增的附件會一併呈現於對外站。",
-    "attachSourceIntake": "進件上傳",
+    "attachHint": "支援 jpg / jpeg / png / pdf。附件不從進件資料帶入 —— 這裡上傳的檔案即為對外站呈現的內容。",
     "attachSourceModule": "本模組上傳",
     "attachDeleteConfirm": "將刪除「{name}」，確定嗎？",
-    "attachExcluded": "車検証、自動車保険証券、運転免許証、個人資訊類附件一律不呈現於對外站，本模組亦不收納。"
+    "attachExcluded": "車検証、自動車保険証券、運転免許証、個人資訊類附件一律不呈現於對外站，本模組亦不收納。",
+    "pickedCount": "已勾選 {n} 台",
+    "clearPick": "取消勾選",
+    "needMileage": "走行距離未填",
+    "attachEmpty": "尚無附件"
   },
   "schedule": {
     "title": "排定拍賣",
@@ -85,9 +88,22 @@
     "round": "輪次",
     "startPrice": "起標價",
     "firstRound": "首輪（全體廠商可見・起標價 0 元）",
-    "done": "已排定拍賣。對外站同步出現這台車，並已觸發全體廠商通知。",
+    "done": "已批次上架 {n} 台。對外站同步出現，並對全體廠商發出一封通知。",
     "errStart": "開始日不可早於今日",
-    "errEnd": "結束日必須晚於開始日"
+    "errEnd": "結束日必須晚於開始日",
+    "batchHint": "將勾選的 {n} 台車以同一組拍賣期間一次上架。期間為整批共用。",
+    "count": "上架台數",
+    "countUnit": "{n} 台",
+    "confirmList": "本次上架車輛",
+    "confirmAsk": "是否已確認所選車輛上架拍賣？",
+    "checkDetail": "確認詳細",
+    "batchFailed": "有車輛未通過檢核，本批一台都沒有上架。",
+    "rejectedTitle": "無法批次上架（全有或全無）",
+    "reject": {
+      "NOT_FOUND": "查無此車輛",
+      "STATUS_CHANGED": "已排定拍賣",
+      "MILEAGE_REQUIRED": "走行距離（實際里程）未填"
+    }
   },
   "auction": {
     "title": "拍賣管理",
@@ -135,12 +151,12 @@
     "actionExtraRound": "進入加價拍賣",
     "awardDisabledNoBid": "無人出價，無法決標",
     "awardDisabledTie": "最高出價兩家以上並列，無法決標。請改用「指定成交廠商」或「進入加價拍賣」。",
-    "designateDisabled": "最高出價未出現並列，無法使用",
+    "designateDisabled": "該輪無人出價，無法指定成交廠商",
     "awardConfirm": "將決標給 {dealer}，成交金額 {amount}。確定嗎？",
     "awardDone": "已決標，並發出得標／未得標通知。",
     "awardFailed": "決標未完成：無法與貸後系統連線，訂單維持在「已結標」。請稍後再試。",
     "designateTitle": "指定成交廠商",
-    "designateHint": "僅能從最高出價並列的廠商中擇一。成交金額等於該廠商的出價金額，不可調整。",
+    "designateHint": "從該輪全部有出價的廠商中選定一家（不限最高價）。成交金額等於該廠商的出價金額，不可調整。",
     "extraTitle": "加價拍賣設定",
     "extraStartPrice": "起標價（前一輪最高出價）",
     "extraStartPriceZero": "前一輪無人出價，起標價為 0 元。",
@@ -156,7 +172,8 @@
     "methodDesignate": "指定成交廠商",
     "awardedAt": "決標日期／操作人",
     "roundHistory": "各輪紀錄",
-    "settledNote": "線下收款與過戶完成後，由貸後系統通知結清，本筆將自列表移除。"
+    "settledNote": "線下收款與過戶完成後，由貸後系統通知結清，本筆將自列表移除。",
+    "topBid": "最高價"
   },
   "dealer": {
     "title": "廠商管理",
@@ -192,7 +209,11 @@
     "lockNote": "鎖定由系統在對外站登入連續錯誤 5 次時自動觸發（內部無法手動鎖定），且不設自動解鎖時限。",
     "loginId": "登入帳號",
     "password": "密碼（Demo）",
-    "failCount": "錯誤 {n} 次"
+    "failCount": "錯誤 {n} 次",
+    "emailTaken": "與其他廠商的登入帳號重複",
+    "loginIdChangeHint": "修改後對外站的登入帳號一併變更（舊 Email 立即失效）。",
+    "loginIdChangeTitle": "變更登入帳號",
+    "loginIdChangeConfirm": "登入帳號將由 {before} 改為 {after}，舊 Email 將無法登入。密碼不變（鎖定狀態也不會解除）。是否確認？"
   },
   "demo": {
     "title": "Demo 控制",
