@@ -1,0 +1,150 @@
+
+.page-wrap {
+  width: 100%;
+  position: relative;
+  box-sizing: border-box;
+  padding: 16px 20px;
+  background: #f7f8fa;
+}
+// 筛选按钮
+.filter-btn-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  .el-button {
+    flex: 1;
+  }
+  .el-button+.el-button {
+    margin-left: 6px;
+  }
+}
+.filter-box {
+  .el-date-editor.el-input, .el-date-editor.el-input__wrapper {
+    width: 100%;
+  }
+}
+.table-section {
+  padding: 16px;
+  border-radius: 16px;
+  background: #ffffff;
+}
+// flex相关
+.flex-space-between {
+  @include flex-space-between;
+}
+.flex-space-between-start {
+  @include flex-space-between-start;
+}
+.flex-start {
+  @include flex-start;
+}
+.flex-start-baseline {
+  @include flex-start-baseline;
+}
+.flex-equally-divide {
+  @include flex-equally-divide;
+}
+.mb-8 {
+  margin-bottom: 8px;
+}
+.mb-16 {
+  margin-bottom: 16px;
+}
+.mr-12 {
+  margin-right: 16px;
+}
+.mr-16 {
+  margin-right: 16px;
+}
+.mt-20 {
+  margin-top: 20px;
+}
+.mt-24 {
+  margin-top: 24px;
+}
+// 绝对居中
+.absolute-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+// 字体-bold
+.pingfang-bold {
+  letter-spacing: 0;
+  font-weight: 600;
+}
+// 字体-regular
+.pingfang-regular {
+  letter-spacing: 0;
+  font-weight: 400;
+}
+
+// 与 vehicle-transfer 等板块标题一致
+.card-title-regular {
+  @include pingfang-regular(16px, 24px);
+}
+
+// 与 @packages/x-components 的 xListTable 视觉一致，供需自订表头/选择列的原生 el-table 使用
+.auction-table {
+  width: 100%;
+
+  .el-table {
+    .el-table__header {
+      thead tr {
+        .cell {
+          font-size: 14px;
+          color: #222222;
+          font-weight: 500;
+        }
+
+        th {
+          background: #f8f8f8;
+
+          &:first-child {
+            border-radius: 8px 0 0 0;
+          }
+
+          &:last-child {
+            border-radius: 0 8px 0 0;
+          }
+        }
+      }
+    }
+
+    td.el-table__cell,
+    th.el-table__cell.is-leaf {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    &.is-scrolling-right th.el-table-fixed-column--right {
+      background: #f8f8f8;
+    }
+  }
+
+  .action-buttons {
+    display: flex;
+    justify-content: left;
+    color: var(--el-color-primary);
+    flex-wrap: wrap;
+
+    & > :not(:last-child) {
+      margin-right: 12px;
+    }
+  }
+
+  .pagination-container {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+}
+
+// 表格内两行式单元格：主行 + 副行
+.cell-main {
+  @include pingfang-regular(14px, 22px);
+}
+.cell-sub {
+  @include pingfang-regular(12px, 20px, left, #999999);
+}

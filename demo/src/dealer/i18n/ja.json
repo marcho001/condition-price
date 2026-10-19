@@ -1,7 +1,10 @@
 {
   "brand": {
-    "name": "XSTAR",
     "sub": "AUCTION"
+  },
+  "header": {
+    "logout": "ログアウトする",
+    "menu": "メニュー"
   },
   "nav": {
     "list": "出品一覧",
@@ -11,13 +14,13 @@
   },
   "common": {
     "back": "戻る",
-    "close": "閉じる",
     "cancel": "キャンセル",
     "none": "—",
     "unit": "件",
     "yen": "円",
     "apply": "適用する",
     "clear": "条件をクリア",
+    "required": "必須項目です",
     "sysError": "システムエラーが発生しました。しばらくしてから再度お試しください。"
   },
   "login": {
@@ -26,76 +29,70 @@
     "email": "Email（ログイン ID）",
     "password": "パスワード",
     "submit": "ログイン",
-    "error": "Email またはパスワードが正しくありません。",
-    "disabled": "このアカウントは現在ご利用いただけません。担当者までご連絡ください。",
-    "locked": "ログインに 5 回失敗したため、アカウントをロックしました。担当者までご連絡ください。",
-    "lockedRetry": "アカウントがロックされています。担当者までご連絡ください。",
-    "passwordNote": "本サイトではパスワードの再発行・変更のお手続きはご利用いただけません。パスワードをお忘れの場合、またはアカウントがロックされた場合は、担当者までご連絡ください。",
-    "demoTitle": "デモ用アカウント",
-    "demoHint": "タップすると入力欄に自動で入ります。"
+    "placeholder": "入力してください",
+    "brandSub": "BIDDING",
+    "tagline": "豊富な車両、スマートな入札、スムーズな取引",
+    "subTagline": "XStarが支える、次世代のオートファイナンス＆オークション",
+    "notice": "本サイトではパスワードの再発行・変更のお手続きはご利用いただけません。パスワードをお忘れの場合、またはアカウントがロックされた場合は、担当者までご連絡ください。"
   },
   "list": {
     "title": "出品一覧",
-    "count": "{n} 台",
     "sortNote": "締切が近い順",
     "filter": "絞り込み",
     "filterTitle": "出品を絞り込む",
-    "maker": "メーカー・車種",
-    "makerPh": "例：トヨタ／アルファード",
+    "vin": "車台番号",
+    "vinPh": "車台番号を入力（一部でも可）",
+    "maker": "メーカー",
+    "makerPh": "選択してください（複数可）",
     "year": "年式",
+    "yearFrom": "から",
+    "yearTo": "まで",
     "mileage": "走行距離",
-    "color": "ボディカラー",
-    "bidState": "入札状況",
-    "all": "すべて",
-    "notBid": "未入札",
-    "bidded": "入札済み",
-    "mileageAny": "指定なし",
-    "mileageUnder3": "3 万 km 未満",
-    "mileage3to6": "3 〜 6 万 km",
-    "mileage6to10": "6 〜 10 万 km",
-    "mileageOver10": "10 万 km 以上",
+    "mileageMin": "下限（km）",
+    "mileageMax": "上限（km）",
+    "mileageRangeError": "下限は上限以下で入力してください",
+    "newArrival": "新着出品",
+    "closingSoon": "締切間近",
     "empty": "入札できる出品はありません",
     "emptyDesc": "新しい出品が登録されると、Email・SMS とこのサイトのお知らせでご連絡します。",
-    "loadMore": "さらに読み込む"
+    "countOnline": "{n} 台オンライン"
   },
   "card": {
+    "vin": "車台番号",
     "deadline": "締切まで",
     "closed": "締切",
-    "period": "期間",
     "startPrice": "開始価格",
     "myBid": "あなたの入札",
     "notBidYet": "未入札",
-    "extraRound": "追加ラウンド"
+    "extraRound": "追加ラウンド",
+    "endingSoon": "締切間近",
+    "year": "年式",
+    "mileage": "走行",
+    "color": "色",
+    "period": "期間",
+    "cancel": "取り消す",
+    "bid": "入札する",
+    "editBid": "入札を変更する",
+    "days": "日"
   },
   "detail": {
-    "photos": "写真・シート",
+    "photosEmpty": "写真はまだありません",
+    "photosEmptyDesc": "この車両の写真はまだ登録されていません。入札は通常どおり可能です。",
     "spec": "車両情報",
     "remark": "備考",
     "attachments": "添付ファイル",
-    "auctionInfo": "オークション情報",
     "round": "ラウンド",
-    "firstRound": "初回ラウンド",
-    "extraRound": "追加ラウンド",
     "period": "期間",
-    "deadline": "締切",
-    "deadlineIn": "締切まで",
     "startPrice": "開始価格",
     "myBid": "あなたの入札",
     "bidAt": "入札日時",
-    "bid": "入札する",
-    "editBid": "入札を変更する",
+    "cancelBid": "入札を取り消す",
+    "cancelBidDisabled": "入札がないため取り消せません",
     "closedNote": "このラウンドは締め切りました。",
-    "extraNote": "追加ラウンドです。開始価格（前ラウンドの最高入札額）を上回る金額でご入札ください。",
     "photoCount": "{i} / {n}",
     "backToList": "一覧に戻る",
     "closedBtn": "締め切りました",
-    "noPhoto": "写真はまだありません",
-    "noPhotoDesc": "この車両は写真が登録されていません。車両情報・備考・添付ファイルをご確認のうえ、ご入札ください。",
-    "cancelBid": "入札を取り消す",
-    "cancelTitle": "この入札を取り消します",
-    "cancelHint": "取り消すと、このラウンドの入札は「未入札」に戻ります（途中で変更された金額もすべて消去されます）。締切前であれば、あらためてご入札いただけます。",
-    "cancelSubmit": "取り消す",
-    "cancelDone": "入札を取り消しました。締切前であれば、あらためてご入札いただけます。"
+    "firstRound": "初回ラウンド"
   },
   "bid": {
     "title": "入札金額の入力",
@@ -104,7 +101,6 @@
     "placeholder": "0",
     "floorFirst": "1 円以上でご入札ください。",
     "floorExtra": "開始価格 {price}。これを上回る金額でご入札ください。",
-    "current": "現在の入札：{amount}",
     "quick": "クイック加算",
     "next": "確認へ進む",
     "confirmTitle": "この金額で入札します",
@@ -114,10 +110,16 @@
     "success": "入札を受け付けました。",
     "updated": "入札金額を変更しました。",
     "errRequired": "金額を入力してください。",
-    "errFloor": "開始価格を上回る金額を入力してください。",
     "errZero": "1 円以上の金額を入力してください。",
-    "errClosed": "締切を過ぎているため入札できません。",
-    "errNotEligible": "このオークションに入札する資格がありません。"
+    "errFloor": "開始価格を上回る金額を入力してください。"
+  },
+  "cancel": {
+    "confirmTitle": "入札の取り消し",
+    "confirmBody": "このラウンドの入札 {amount} を取り消し、未入札の状態に戻します。締切前であれば再度ご入札いただけます。",
+    "back": "戻る",
+    "submit": "取り消す",
+    "success": "入札を取り消しました。",
+    "amountLabel": "取り消す金額（円）"
   },
   "mybids": {
     "title": "入札中",
@@ -138,56 +140,40 @@
     "empty": "お知らせはありません",
     "emptyDesc": "新しい出品、追加ラウンドの招待、締切のご案内、入札結果をここでお知らせします。",
     "unread": "未読",
-    "NEW_AUCTION": {
-      "title": "新しい出品車両のご案内（{count} 台）",
-      "body": "{list}\n入札締切：{end}",
-      "label": "新着出品"
-    },
-    "EXTRA_ROUND_INVITE": {
-      "title": "追加ラウンドのご案内（{car}）",
-      "body": "開始価格 {price} を上回る金額でご入札ください。締切：{end}",
-      "label": "追加ラウンド"
-    },
-    "CLOSING_SOON": {
-      "title": "入札締切間近のお知らせ（{car}）",
-      "body": "{end} に締め切られます。まだご入札がございません。",
-      "label": "締切間近"
-    },
-    "WON": {
-      "title": "落札のお知らせ（{car}）",
-      "body": "落札金額 {amount} で落札されました。お支払い・名義変更は担当者よりご連絡します。",
-      "label": "落札"
-    },
-    "LOST": {
-      "title": "選定結果のお知らせ（{car}）",
-      "body": "本件は他社様に決定いたしました。ご検討いただき誠にありがとうございました。",
-      "label": "選定結果"
-    },
-    "filterAll": "すべての種類",
-    "searchPh": "本文・件名を検索",
-    "count": "{n} 件",
+    "filterType": "お知らせの種類",
+    "typeAll": "すべて",
+    "typeListed": "新着出品",
+    "typeExtraRound": "追加ラウンド",
+    "typeDeadline": "締切間近",
+    "typeWon": "落札",
+    "typeLost": "選定結果",
+    "search": "お知らせを検索",
+    "noResult": "条件に一致するお知らせはありません",
     "selectAll": "すべて選択",
-    "unselectAll": "選択を解除",
+    "selectedCount": "{n} 件を選択中",
     "delete": "削除",
-    "deleteTitle": "お知らせを削除します",
-    "deleteCount": "{n} 件",
-    "deleteHint": "削除できるのは貴社のサイト内お知らせのみです。送信済みの Email・SMS には影響しません。削除したお知らせは元に戻せません。",
-    "deleteSubmit": "削除する",
+    "deleteConfirmTitle": "お知らせの削除",
+    "deleteConfirmBody": "{n} 件のお知らせを削除します。元に戻すことはできません。よろしいですか？",
     "deleteDone": "{n} 件のお知らせを削除しました。",
-    "noMatch": "該当するお知らせはありません",
-    "noMatchDesc": "種類・キーワードの条件を変更してお試しください。",
-    "goneAuction": "このオークションは終了しています。出品一覧を表示しました。",
-    "goneWon": "このお取引は完了しています。落札済み一覧を表示しました。"
+    "total": "{n} 件",
+    "unreadCount": "未読 {n}",
+    "deleteNote": "削除できるのは貴社のサイト内お知らせのみです。送信済みの Email・SMS には影響しません。削除したお知らせは元に戻せません。"
   },
-  "demo": {
-    "title": "デモ操作",
-    "time": "サーバー時間",
-    "shift1h": "+1 時間",
-    "shift6h": "+6 時間",
-    "shift1d": "+1 日",
-    "resetTime": "現在時刻に戻す",
-    "logout": "ログアウト",
-    "openInternal": "内部システムを開く",
-    "switch": "販売店を切り替える"
+  "vehicle": {
+    "makeName": "メーカー",
+    "seriesName": "車系",
+    "yearName": "モデル",
+    "modelName": "グレード",
+    "carYear": "年式",
+    "color": "ボディカラー",
+    "fuelType": "燃料の種類",
+    "displacement": "総排気量または定格出力",
+    "mileage": "走行距離",
+    "vin": "車台番号",
+    "licensingPlateNumber": "ナンバープレート",
+    "productDate": "登録年月日/交付年月日",
+    "registeDate": "初度登録年月",
+    "vehicleUsageType": "自家用・事業用の別",
+    "transferCount": "車両の移転回数"
   }
 }

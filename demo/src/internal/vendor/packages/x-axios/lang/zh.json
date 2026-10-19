@@ -1,0 +1,12 @@
+{
+  "loading": "加载中...",
+  "refresh": "刷新",
+  "success": "成功",
+  "error": "错误",
+  "done": "完成",
+  "failed": "失败",
+  "message": {
+    "error": "系统繁忙，请稍后再试",
+    "timeout": "网络连接失败"
+  }
+}

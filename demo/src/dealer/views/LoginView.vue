@@ -1,161 +1,129 @@
-<template>
-  <div class="login-wrap">
-    <div class="sheet-card">
-      <div class="sheet-head">
-        <span class="mark fig">XSTAR</span>
-        <span class="sub fig">BIDDING</span>
-      </div>
-
-      <div class="sheet-body">
-        <h1>{{ t('login.title') }}</h1>
-        <p class="lead">{{ t('login.sub') }}</p>
-
-        <form @submit.prevent="submit">
-          <div class="field">
-            <label for="email">{{ t('login.email') }}</label>
-            <input id="email" v-model.trim="email" class="input" type="email" autocomplete="username" />
-          </div>
-          <div class="field">
-            <label for="pwd">{{ t('login.password') }}</label>
-            <input id="pwd" v-model="password" class="input" type="password" autocomplete="current-password" />
-          </div>
-          <p v-if="error" class="err">{{ error }}</p>
-          <button class="btn btn-primary btn-block" type="submit">{{ t('login.submit') }}</button>
-        </form>
-
-        <!-- 本サイトにはパスワードの再設定・変更機能はありません（担当者が再発行） -->
-        <p class="pw-note">{{ t('login.passwordNote') }}</p>
-      </div>
-
-      <div class="sheet-foot">
-        <p class="eyebrow">{{ t('login.demoTitle') }}</p>
-        <p class="hint">{{ t('login.demoHint') }}</p>
-        <div class="chips">
-          <button v-for="d in demoDealers" :key="d.id" class="chip" type="button" @click="fill(d)">
-            <b>{{ d.name }}</b>
-            <span class="fig">{{ d.email }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup>
-import { computed, ref } from 'vue'
+// 登入（規格 四；Figma：登录、登录/输入-报错状态、H5 登录）
+import { reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
-import { db } from '@/shared/store.js'
-import { dealerLogin } from '@/shared/engine.js'
+import { useRoute, useRouter } from 'vue-router'
+import loginBg from '@/assets/login-bg.jpg'
+import logoDark from '@/assets/logo-dark.svg'
+import logo from '@/assets/logo.svg'
+import { useAuthStore } from '@/stores/auth'
+import DemoAccounts from '@/demo/DemoAccounts.vue'
 
 const { t } = useI18n()
+const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
-const email = ref('')
-const password = ref('')
-const error = ref('')
+const form = reactive({ email: '', password: '' })
+// 欄位驗證錯誤顯示在欄位下方（紅字＋紅框）；送出後的 API 錯誤由 request 攔截器以 toast 顯示（規格 4.1）
+const fieldErrors = reactive({ email: '', password: '' })
+const submitting = ref(false)
 
-const demoDealers = computed(() => db.dealers)
-
-function fill(d) {
-  email.value = d.email
-  password.value = d.password
-  error.value = ''
+function validate() {
+  fieldErrors.email = form.email ? '' : t('common.required')
+  fieldErrors.password = form.password ? '' : t('common.required')
+  return !fieldErrors.email && !fieldErrors.password
 }
 
-// 連続 5 回の失敗でアカウントをロック。解除は社内の「ロック解除」のみ（自動解除なし）
-const ERROR_KEY = {
-  BAD_CREDENTIAL: 'login.error',
-  LOCKED: 'login.locked',
-  LOCKED_RETRY: 'login.lockedRetry',
-  DISABLED: 'login.disabled'
+// Demo：一鍵帶入帳號
+function fillDemo({ email, password }) {
+  Object.assign(form, { email, password })
+  Object.assign(fieldErrors, { email: '', password: '' })
 }
 
-function submit() {
-  error.value = ''
-  const res = dealerLogin(email.value, password.value)
-  if (!res.ok) {
-    error.value = t(ERROR_KEY[res.error] || 'login.error')
-    return
+async function submit() {
+  if (!validate()) return
+  submitting.value = true
+  try {
+    await auth.login({ ...form })
+    router.replace(route.query.redirect || { name: 'auction-list' })
+  } catch {
+    // 帳密錯誤、鎖定、停用：攔截器已顯示後端訊息，停留在登入頁
+  } finally {
+    submitting.value = false
   }
-  router.replace({ name: 'list' })
 }
 </script>
 
+<template>
+  <div class="flex min-h-screen bg-white">
+    <!-- 左側品牌區（僅 PC） -->
+    <aside class="relative hidden w-1/2 overflow-hidden md:block">
+      <img :src="loginBg" alt="" class="absolute inset-0 size-full object-cover" />
+      <div class="absolute inset-0 bg-[#0f1626]/65" />
+      <div class="absolute top-1/2 left-[13%] flex max-w-[560px] -translate-y-1/2 flex-col gap-6 text-white">
+        <div class="flex items-end gap-3">
+          <img :src="logo" alt="XSTAR" class="h-7 w-40" />
+          <span class="text-2xl leading-none font-light text-white/80">{{ $t('login.brandSub') }}</span>
+        </div>
+        <span class="h-[3px] w-[378px] max-w-full bg-brand" />
+        <div class="flex flex-col gap-2">
+          <p class="text-lg font-medium opacity-90">{{ $t('login.tagline') }}</p>
+          <p class="text-sm text-white/50">{{ $t('login.subTagline') }}</p>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 登入表單 -->
+    <section class="flex flex-1 items-center justify-center px-8 py-20 md:px-[120px]">
+      <div class="flex w-full max-w-[480px] flex-col gap-6 md:gap-10">
+        <div class="flex items-end gap-2 md:hidden">
+          <img :src="logoDark" alt="XSTAR" class="h-5 w-[113px]" />
+          <span class="text-lg leading-none font-light text-ink">{{ $t('login.brandSub') }}</span>
+        </div>
+
+        <div class="flex flex-col gap-3">
+          <h1 class="text-2xl font-bold text-ink md:text-[32px]">{{ $t('login.title') }}</h1>
+          <p class="text-xs leading-[18px] text-ink-regular md:text-sm md:leading-[21px]">{{ $t('login.sub') }}</p>
+        </div>
+
+        <form class="flex flex-col gap-8" @submit.prevent="submit">
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-ink">{{ $t('login.email') }}</span>
+            <el-input
+              v-model.trim="form.email"
+              type="email"
+              autocomplete="username"
+              :placeholder="$t('login.placeholder')"
+              class="login-input"
+              :class="{ 'is-error': fieldErrors.email }"
+            />
+            <span v-if="fieldErrors.email" class="text-sm text-danger" role="alert">{{ fieldErrors.email }}</span>
+          </label>
+          <label class="flex flex-col gap-2">
+            <span class="text-sm font-medium text-ink">{{ $t('login.password') }}</span>
+            <el-input
+              v-model="form.password"
+              type="password"
+              autocomplete="current-password"
+              show-password
+              :placeholder="$t('login.placeholder')"
+              class="login-input"
+              :class="{ 'is-error': fieldErrors.password }"
+            />
+            <span v-if="fieldErrors.password" class="text-sm text-danger" role="alert">{{ fieldErrors.password }}</span>
+          </label>
+          <el-button type="primary" native-type="submit" :loading="submitting" class="!h-12 !text-base !font-bold">
+            {{ $t('login.submit') }}
+          </el-button>
+        </form>
+
+        <p class="rounded-lg bg-page p-4 text-xs leading-[19px] text-ink-hint">{{ $t('login.notice') }}</p>
+
+        <!-- Demo 專用 -->
+        <DemoAccounts @fill="fillDemo" />
+      </div>
+    </section>
+  </div>
+</template>
+
 <style scoped>
-.login-wrap {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 28px 16px 48px;
+.login-input :deep(.el-input__wrapper) {
+  height: 48px;
+  padding: 0 16px;
+  font-size: 16px;
 }
-
-.sheet-card {
-  width: 100%;
-  max-width: 440px;
-  background: var(--card);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+.login-input.is-error :deep(.el-input__wrapper) {
+  box-shadow: 0 0 0 1px var(--color-danger) inset;
 }
-
-.sheet-head {
-  background: var(--ink);
-  color: #eef1ec;
-  padding: 18px 22px;
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-.sheet-head .mark { font-size: 19px; letter-spacing: 0.2em; font-weight: 600; }
-.sheet-head .sub { font-size: 10.5px; letter-spacing: 0.3em; color: #8e9a90; }
-
-.sheet-body { padding: 26px 22px 20px; }
-
-h1 { margin: 0 0 8px; font-size: 19px; font-weight: 600; letter-spacing: 0.01em; }
-
-.lead { margin: 0 0 22px; font-size: 13px; line-height: 1.9; color: var(--ink-3); }
-
-.err {
-  margin: -4px 0 14px;
-  font-size: 13px;
-  color: var(--seal);
-}
-
-.pw-note {
-  margin: 18px 0 0;
-  font-size: 12px;
-  line-height: 1.85;
-  color: var(--ink-3);
-  background: var(--sheet);
-  border-radius: var(--r-sm);
-  padding: 10px 12px;
-}
-
-.sheet-foot {
-  border-top: 1px solid var(--rule-soft);
-  background: #f6f8f5;
-  padding: 18px 22px 22px;
-}
-
-.hint { margin: 6px 0 12px; font-size: 12px; line-height: 1.8; color: var(--ink-3); }
-
-.chips { display: flex; flex-direction: column; gap: 7px; }
-
-.chip {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  border: 1px solid var(--rule);
-  background: var(--card);
-  border-radius: 10px;
-  padding: 9px 12px;
-  cursor: pointer;
-  text-align: left;
-}
-.chip:hover { border-color: var(--bid); }
-.chip b { font-size: 13px; font-weight: 600; }
-.chip span { font-size: 11.5px; color: var(--ink-3); }
 </style>

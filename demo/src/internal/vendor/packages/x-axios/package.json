@@ -1,0 +1,20 @@
+{
+  "name": "@packages/x-axios",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "peerDependencies": {
+    "vue": "^3.4.21",
+    "element-plus": "~2.8.2"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "js-md5": "^0.8.3",
+    "qs": "^6.12.1"
+  },
+  "devDependencies": {
+    "@packages/eslint-config-custom": "workspace:^",
+    "eslint": "^8.57.0"
+  }
+}

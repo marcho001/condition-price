@@ -51,29 +51,30 @@
       <div class="eyebrow">Japan · Vehicle Auction</div>
       <h1>車輛拍賣 Demo</h1>
       <p class="sub">
-        依《內部系統 V1.4》與《廠商競價站 V1.4》兩份規格製作的純前端 Demo。
-        兩站各自獨立，但共用同一份 localStorage 假資料 —— 在內部系統排定拍賣後，
-        競價站會立即出現該台車；廠商出價後，內部系統的家數與排名也會同步更新。
+        依《內部系統 V3.6》與《廠商競價站 V3.5》製作的純前端 Demo。
+        兩站的畫面直接取自正式專案（xstar-web-pc／auction-platform），只把 API 換成瀏覽器內的假後端，
+        並共用同一份 localStorage 假資料 —— 在內部系統排定拍賣後，競價站於開始日出現該台車；
+        廠商出價後，內部系統的已出價家數與出價紀錄也會同步更新。
       </p>
       <div class="grid">
         <a class="card" href="/internal.html">
           <span class="tag t-internal">內部系統</span>
           <h2>車両オークション管理</h2>
-          <p>沿用 xstar-web-pc 的版型與樣式：深色側欄、白底圓角卡片、Element Plus 表格與篩選。</p>
+          <p>xstar-web-pc 的 auction-management 子應用，外面套一層 portal 側欄與頂部列。</p>
           <ul>
-            <li>車輛管理 · 車輛詳細 · 排定拍賣</li>
-            <li>拍賣管理 · 進行中／已結標／已決標</li>
-            <li>廠商管理 · 帳號開通與停用</li>
+            <li>車輛管理 · 車輛詳細 · 批次排定拍賣</li>
+            <li>拍賣管理 · 待開始／進行中／已結標／已決標</li>
+            <li>廠商管理 · 帳號開通、重設密碼、解鎖</li>
           </ul>
         </a>
         <a class="card" href="/dealer.html">
           <span class="tag t-dealer">對外系統</span>
           <h2>廠商競價站</h2>
-          <p>手機優先、全站日文。重新設計的介面，以「出品票」與倒數看板為主軸。</p>
+          <p>auction-platform（XSTAR BIDDING）。手機 + PC、全站日文，依 Figma 設計稿實作。</p>
           <ul>
-            <li>出品一覧 · 車両詳細 · 入札</li>
-            <li>入札中 · 落札済み</li>
-            <li>お知らせ（未読バッジ）</li>
+            <li>拍賣列表 · 車輛詳細 · 入札／取り消し</li>
+            <li>我的拍賣 · 已得標</li>
+            <li>お知らせ（篩選・搜尋・刪除）</li>
           </ul>
         </a>
       </div>

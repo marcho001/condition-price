@@ -1,0 +1,53 @@
+@import "tailwindcss" important;
+
+/*
+ * 設計 token：取自 Figma 的色彩變數（通用／日本 品牌色）。
+ * 在 template 裡以 Tailwind class 使用，例如 text-ink、bg-page、border-line、bg-brand。
+ */
+@theme {
+  --color-brand: #0568ff;
+  --color-ink: #222222; /* 重要文字 */
+  --color-ink-regular: #666666; /* 常規文字 */
+  --color-ink-hint: #999999; /* 提示文字 */
+  --color-disabled: #dddddd;
+  --color-line: #e1e1e1; /* 邊框線 */
+  --color-divider: #f1f1f1; /* 分割線 */
+  --color-page: #f8f8f8; /* 頁面底色 */
+  --color-warning: #ffaf00; /* 即將截止 */
+  --color-danger: #a8071a; /* 取消出價、刪除、錯誤 */
+  --color-badge: #e3433a; /* 未讀 */
+  --color-success: #16a34a; /* 落札 */
+  --color-placeholder: #e9eded; /* 無照片底色 */
+
+  --font-sans: Roboto, 'Hiragino Sans', 'Noto Sans JP', system-ui, sans-serif;
+}
+
+/* Element Plus 主色改為品牌色。用 :root:root 提高權重，否則會被之後才按需載入的 Element Plus 樣式蓋掉 */
+:root:root {
+  --el-color-primary: #0568ff;
+  --el-color-primary-light-3: #508fff;
+  --el-color-primary-light-5: #82b3ff;
+  --el-color-primary-light-7: #b4d2ff;
+  --el-color-primary-light-8: #cde1ff;
+  --el-color-primary-light-9: #e6f0ff;
+  --el-color-primary-dark-2: #0453cc;
+  --el-color-danger: #a8071a;
+  --el-border-color: #e1e1e1;
+  --el-text-color-primary: #222222;
+  --el-text-color-regular: #666666;
+  --el-text-color-placeholder: #999999;
+  --el-border-radius-base: 8px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

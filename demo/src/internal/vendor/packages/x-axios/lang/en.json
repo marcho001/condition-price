@@ -1,0 +1,12 @@
+{
+  "loading": "Loading...",
+  "refresh": "Refresh",
+  "success": "Success",
+  "error": "Error",
+  "done": "Done",
+  "failed": "Failed",
+  "message": {
+    "error": "System is busy, please try again later.",
+    "timeout": "Request timeout, please try again later."
+  }
+}

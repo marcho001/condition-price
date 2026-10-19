@@ -1,0 +1,41 @@
+// 字体-bold
+@mixin pingfang-bold($fontSize, $lineHeight, $textAlign: left, $color: #222222) {
+  letter-spacing: 0;
+  font-weight: 600;
+  font-size: $fontSize;
+  line-height: $lineHeight;
+  text-align: $textAlign;
+  color: $color;
+}
+// 字体-regular
+@mixin pingfang-regular($fontSize, $lineHeight, $textAlign: left, $color: #222222) {
+  letter-spacing: 0;
+  font-weight: 400;
+  font-size: $fontSize;
+  line-height: $lineHeight;
+  text-align: $textAlign;
+  color: $color;
+}
+@mixin flex-space-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+@mixin flex-space-between-start {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+@mixin flex-start {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+@mixin flex-start-baseline {
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
+}
+@mixin flex-equally-divide {
+  flex: 1;
+}
