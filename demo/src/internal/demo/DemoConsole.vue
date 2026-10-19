@@ -15,7 +15,7 @@
         </div>
 
         <!-- 伺服器時間 -->
-        <div class="row">
+        <div class="row time-row">
           <span class="k">{{ t('demo.time') }}</span>
           <b class="num">{{ nowText }}</b>
         </div>
@@ -423,6 +423,11 @@ async function doReset() {
       font-size: 12.5px;
       color: #222222;
     }
+  }
+
+  .time-row {
+    flex-direction: column;
+    gap: 2px;
   }
 
   .offset {

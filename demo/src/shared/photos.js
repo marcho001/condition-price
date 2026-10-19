@@ -138,20 +138,21 @@ function plateOf(v) {
   return p.split(' ').slice(0, 2).join(' ')
 }
 
+// 外觀照會被對外站卡片裁成封面，不疊文字；其他部位照保留標題
 export function carPhoto(kind, vehicle) {
   const color = vehicle?.color
   const name = [vehicle?.makeName, vehicle?.seriesName].filter(Boolean).join(' ')
   switch (kind) {
     case 'side':
-      return shell(sideView(color) + caption(name, `${vehicle?.color || ''}・サイド`))
+      return shell(sideView(color))
     case 'front':
-      return shell(frontView(color, plateOf(vehicle)) + caption(name, 'フロント'))
+      return shell(frontView(color, plateOf(vehicle)))
     case 'rear':
-      return shell(rearView(color) + caption(name, 'リア'))
+      return shell(rearView(color))
     case 'left':
-      return shell(sideView(color) + caption(name, '左サイド'))
+      return shell(sideView(color))
     case 'right':
-      return shell(sideView(color) + caption(name, '右サイド'))
+      return shell(sideView(color))
     case 'meter':
       return shell(meterView(vehicle?.mileage) + caption('走行距離メーター'), { bg1: '#e9ece9', bg2: '#cfd5d0' })
     case 'seat1':
@@ -173,6 +174,6 @@ export function carPhoto(kind, vehicle) {
     case 'condition':
       return shell(sideView(color) + caption('引取後の現況写真', '入庫時に撮影'))
     default:
-      return shell(sideView(color) + caption(name, ''))
+      return shell(sideView(color))
   }
 }

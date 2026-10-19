@@ -9,8 +9,8 @@
 
 | Demo | 畫面來源 | 換掉的部分 |
 |---|---|---|
-| 內部系統 | `xstar-web-pc/application/auction-management/src` → `src/internal/`（workspace packages 放在 `src/internal/vendor/packages/`） | `$axios` 改走 `src/internal/mock/`；外面套一層 portal 側欄／頂部列與 Demo 權限切換 |
-| 對外系統 | `auction-platform/src` → `src/dealer/` | `src/dealer/mock/` 改為呼叫共用拍賣核心；倒數改用 Demo 的伺服器時間；登入頁加 Demo 帳號 |
+| 內部系統 | `xstar-web-pc/application/auction-management/src` → `src/internal/`（workspace packages 放在 `src/internal/vendor/packages/`） | `$axios` 改走 `src/internal/mock/`；外面套一層 portal 側欄／頂部列與 Demo 權限切換（`src/internal/demo/`）；廠商管理在登入 Email 下方多一行試用密碼 |
+| 對外系統 | `auction-platform/src` → `src/dealer/` | `src/dealer/mock/` 改為呼叫共用拍賣核心；倒數改用 Demo 的伺服器時間；hash 路由；登入頁加 Demo 帳號（`src/dealer/demo/`） |
 
 要同步正式專案的新改動：把對應檔案重新複製過來即可，兩邊的 `@/` import 由 `vite.config.js` 依檔案所在資料夾自動對應，不必改寫。
 
@@ -80,6 +80,8 @@ entry 模擬：`src/shared/engine.js` 扮演後端拍賣核心，兩個前端的
 | 切換廠商（對外站） | 不用重新登入就能換成別家廠商的視角 |
 | 開啟另一站 | 開新分頁 |
 
+時間快轉是單向的：快轉期間已開始／已結標的拍賣，按「回到現在時間」後不會倒回，要回到初始狀態請重置 Demo 資料。
+
 快轉之後會自動發生：**開始**（待開始 → 拍賣進行中，開始日 00:00）、**開始日通知**（09:00，上架通知依批次歸組）、
 **自動催投**（結標日前 2 天 09:00，須晚於開始日）、**結標**（進行中 → 已結標）。
 
@@ -87,7 +89,7 @@ entry 模擬：`src/shared/engine.js` 扮演後端拍賣核心，兩個前端的
 
 ## 帳號
 
-**內部系統**不做登入，右上角有 Demo 用的角色切換（規格第三章，一個帳號可同時擁有兩者）：
+**內部系統**不做登入，右上角有 Demo 用的「權限（デモ）」切換（日文介面為 督促担当／財務担当；規格第三章，一個帳號可同時擁有兩者，至少保留一個）：
 
 | 角色 | 權限點 | 看得到什麼 |
 |---|---|---|
